@@ -3,7 +3,6 @@ BBTerminal - Bloomberg Launchpad Style Dashboard
 A comprehensive financial market monitoring dashboard for daily DQ workflow
 """
 import streamlit as st
-from datetime import datetime
 
 # Configure page FIRST before any other Streamlit commands
 st.set_page_config(
@@ -25,8 +24,8 @@ from components.rates_panel import render_rates_panel
 from components.mortgages_panel import render_mortgages_panel
 from components.commodities_panel import render_commodities_panel
 from components.economic_panel import render_economic_panel
-from components.alerts_panel import render_alerts_panel, render_market_status
-from components.holidays_panel import render_holidays_panel, render_compact_holidays
+from components.alerts_panel import render_alerts_panel
+from components.holidays_panel import render_holidays_panel
 
 
 def main():
@@ -77,28 +76,26 @@ def main():
             except Exception as e:
                 st.error(f"Error loading mortgages: {str(e)}")
 
-    # Second row - Economic and Alerts
-    col7, col8 = st.columns([1, 1])
+    # Second row - Holidays, Economic, and Alerts
+    col7, col8, col9 = st.columns([1, 1, 1])
 
     with col7:
+        try:
+            render_holidays_panel()
+        except Exception as e:
+            st.error(f"Error loading holidays: {str(e)}")
+
+    with col8:
         try:
             render_economic_panel()
         except Exception as e:
             st.error(f"Error loading economic data: {str(e)}")
 
-    with col8:
+    with col9:
         try:
             render_alerts_panel()
         except Exception as e:
             st.error(f"Error loading alerts: {str(e)}")
-
-    # Expandable sidebar for details
-    with st.sidebar:
-        render_market_status()
-        st.markdown("---")
-        render_compact_holidays()
-        st.markdown("---")
-        render_holidays_panel()
 
     # Minimal footer
     st.markdown("""

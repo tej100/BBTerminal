@@ -1,64 +1,89 @@
 """
 Holidays Panel Component
-Global holiday calendar sidebar - Compact version
+Global exchange holiday calendar
 """
 import streamlit as st
 import pandas as pd
-from datetime import date, timedelta
+from datetime import date
 from data.calendars import CalendarFetcher
-from config.settings import EXCHANGE_CALENDARS
 
 
 def render_holidays_panel():
-    """Render the holidays sidebar panel"""
+    """Render the holidays panel with tabular format"""
     st.markdown("### Holidays")
 
     calendars = CalendarFetcher()
 
-    # Upcoming holidays
-    st.markdown("#### Upcoming (30d)")
-    try:
-        upcoming = calendars.get_upcoming_holidays(days=30)
+    # Filter by region
+    regions = ['All', 'US', 'UK', 'JP', 'DE', 'HK', 'CN']
+    selected_region = st.selectbox("Region", regions, label_visibility="collapsed", key="holiday_region")
 
-        if upcoming.empty:
-            st.info("No upcoming holidays")
-        else:
-            # Compact list
-            for _, row in upcoming.head(10).iterrows():
-                date_str = row['date'].strftime('%m/%d') if hasattr(row['date'], 'strftime') else str(row['date'])
-                st.caption(f"{date_str} - {row['region']}: {row['holiday']}")
+    try:
+        # Get upcoming holidays (60 days)
+        df = calendars.get_upcoming_holidays(days=60)
+
+        if df.empty:
+            st.info("No holiday data available")
+            return
+
+        # Filter by region if selected
+        if selected_region != 'All':
+            df = df[df['region'] == selected_region]
+
+        if df.empty:
+            st.info(f"No upcoming holidays for {selected_region}")
+            return
+
+        # Format for display
+        df = df.rename(columns={
+            'region': 'Region',
+            'exchange': 'Market',
+            'holiday': 'Holiday'
+        })
+
+        # Format date
+        df['Date'] = df['date'].apply(lambda x: x.strftime('%Y-%m-%d') if hasattr(x, 'strftime') else str(x))
+
+        # Add "Days Away" column
+        today = date.today()
+        df['Days'] = df['date'].apply(lambda x: (x - today).days if hasattr(x, '__sub__') else 0)
+
+        # Select and order columns
+        display_df = df[['Date', 'Days', 'Region', 'Market', 'Holiday']].copy()
+        display_df['Days'] = display_df['Days'].apply(lambda x: f"+{x}" if x > 0 else "Today")
+
+        # Style by region
+        def _color_region_column(series):
+            region_colors = {
+                'US': '#58a6ff',   # Blue
+                'UK': '#3fb950',   # Green
+                'JP': '#f85149',   # Red
+                'DE': '#d29922',   # Yellow/Orange
+                'HK': '#a371f7',   # Purple
+                'CN': '#ff6b00',   # Orange
+            }
+            colors = []
+            for val in series:
+                colors.append(f'color: {region_colors.get(val, "#8b949e")}')
+            return colors
+
+        styled_df = display_df.style.apply(_color_region_column, subset=['Region'])
+
+        st.dataframe(
+            styled_df,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                'Date': st.column_config.TextColumn(width='small'),
+                'Days': st.column_config.TextColumn(width='small'),
+                'Region': st.column_config.TextColumn(width='small'),
+                'Market': st.column_config.TextColumn(width='small'),
+                'Holiday': st.column_config.TextColumn(width='large')
+            }
+        )
+
+        # Show count of holidays by region
+        st.caption(f"*Showing {len(display_df)} upcoming holidays • Market closed on highlighted dates*")
 
     except Exception as e:
-        st.warning(f"Unable to fetch holidays")
-
-
-def render_compact_holidays():
-    """Render a compact version of holidays for sidebar"""
-    calendars = CalendarFetcher()
-
-    # Today's holidays
-    try:
-        todays_holidays = calendars.get_todays_holidays()
-
-        if not todays_holidays.empty:
-            st.markdown("**Holidays Today:**")
-            for _, row in todays_holidays.iterrows():
-                st.caption(f"{row['region']}: {row['holiday']}")
-        else:
-            st.markdown("**No holidays today**")
-
-    except Exception:
-        st.markdown("**Holiday data unavailable**")
-
-    # Upcoming
-    try:
-        upcoming = calendars.get_upcoming_holidays(days=7)
-
-        if not upcoming.empty:
-            st.markdown("**This Week:**")
-            for _, row in upcoming.head(3).iterrows():
-                date_str = row['date'].strftime('%m/%d') if hasattr(row['date'], 'strftime') else str(row['date'])
-                st.caption(f"{date_str}: {row['region']}")
-
-    except Exception:
-        pass
+        st.error(f"Error loading holidays: {str(e)}")
