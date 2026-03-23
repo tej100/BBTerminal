@@ -2,12 +2,27 @@
 Holiday calendar and corporate actions fetcher
 """
 import pandas as pd
+import streamlit as st
 from datetime import date, timedelta
 from typing import Dict, List, Optional
 import pandas_market_calendars as mcal
 from .fetcher import DataFetcher
 from config.settings import EXCHANGE_CALENDARS
 import yfinance as yf
+
+
+# Streamlit-cached function for corporate actions - prevents repeated API calls
+@st.cache_data(ttl=300)
+def _fetch_yfinance_actions(ticker: str) -> pd.DataFrame:
+    """
+    Fetch corporate actions from yfinance.
+    Cached by Streamlit to prevent repeated API calls on widget interactions.
+    """
+    try:
+        stock = yf.Ticker(ticker)
+        return stock.actions
+    except Exception:
+        return pd.DataFrame()
 
 
 class CalendarFetcher(DataFetcher):
@@ -25,10 +40,6 @@ class CalendarFetcher(DataFetcher):
             DataFrame with exchange, region, and holiday name
         """
         today = date.today()
-        cache_key = "holidays_today"
-        cached = self._get_cached(cache_key)
-        if cached is not None:
-            return cached
 
         results = []
         for region, exchange_code in self.calendars.items():
@@ -61,9 +72,7 @@ class CalendarFetcher(DataFetcher):
             except Exception:
                 continue
 
-        result_df = pd.DataFrame(results)
-        self._set_cache(cache_key, result_df)
-        return result_df
+        return pd.DataFrame(results)
 
     def get_upcoming_holidays(self, days: int = 30) -> pd.DataFrame:
         """
@@ -75,11 +84,6 @@ class CalendarFetcher(DataFetcher):
         Returns:
             DataFrame with upcoming holidays
         """
-        cache_key = f"holidays_upcoming_{days}"
-        cached = self._get_cached(cache_key)
-        if cached is not None:
-            return cached
-
         today = date.today()
         end_date = today + timedelta(days=days)
         results = []
@@ -115,7 +119,6 @@ class CalendarFetcher(DataFetcher):
         result_df = pd.DataFrame(results)
         if not result_df.empty:
             result_df = result_df.sort_values('date')
-        self._set_cache(cache_key, result_df)
         return result_df
 
     def get_exchange_holidays(self, exchange_code: str, year: int = None) -> List[date]:
@@ -131,11 +134,6 @@ class CalendarFetcher(DataFetcher):
         """
         if year is None:
             year = date.today().year
-
-        cache_key = f"holidays_{exchange_code}_{year}"
-        cached = self._get_cached(cache_key)
-        if cached is not None:
-            return cached
 
         try:
             cal = mcal.get_calendar(exchange_code)
@@ -155,7 +153,6 @@ class CalendarFetcher(DataFetcher):
                     if start <= h_date <= end:
                         holiday_dates.append(h_date)
 
-            self._set_cache(cache_key, holiday_dates)
             return holiday_dates
 
         except Exception:
@@ -172,14 +169,8 @@ class CalendarFetcher(DataFetcher):
         Returns:
             DataFrame with corporate actions
         """
-        cache_key = f"corp_actions_{ticker}_{days}"
-        cached = self._get_cached(cache_key)
-        if cached is not None:
-            return cached
-
         try:
-            stock = yf.Ticker(ticker)
-            actions = stock.actions
+            actions = _fetch_yfinance_actions(ticker)
 
             if actions is not None and len(actions) > 0:
                 # Filter to recent days
@@ -190,8 +181,6 @@ class CalendarFetcher(DataFetcher):
                     recent = recent.reset_index()
                     recent['ticker'] = ticker
                     recent.columns = ['date'] + list(recent.columns[1:])
-
-                    self._set_cache(cache_key, recent)
                     return recent
 
             return pd.DataFrame()

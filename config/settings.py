@@ -37,8 +37,6 @@ SECTOR_ETFS = {
     "XLC": "Communication Services",
 }
 
-KEY_STOCKS = ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "TSLA"]
-
 # Interest Rates (FRED Series IDs)
 INTEREST_RATES = {
     "FEDFUNDS": "Fed Funds Rate",
@@ -88,3 +86,4 @@ EXCHANGE_CALENDARS = {
     "HK": "XHKG",  # Hong Kong
     "CN": "XSHG",  # Shanghai
 }
+

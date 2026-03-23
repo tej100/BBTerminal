@@ -1,12 +1,11 @@
 """
 Commodities Panel Component
-Commodity prices and performance
+Commodity prices and performance - Compact version
 """
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 from data.commodities import CommoditiesFetcher
-from utils.formatters import format_price, format_percent
 
 
 def render_commodities_panel():
@@ -16,18 +15,31 @@ def render_commodities_panel():
     commodities = CommoditiesFetcher()
 
     # Tabs for different views
-    tab1, tab2 = st.tabs(["Overview", "Details"])
+    tab1, tab2 = st.tabs(["Overview", "Chart"])
 
     with tab1:
         _render_commodities_overview(commodities)
 
     with tab2:
-        _render_commodities_details(commodities)
+        _render_commodities_chart(commodities)
+
+
+def _color_change_columns(series):
+    """Apply green/red color to change columns based on positive/negative values"""
+    colors = []
+    for val in series:
+        if val == '-' or pd.isna(val):
+            colors.append('color: #8b949e')  # Gray for N/A
+        elif str(val).startswith('+') or (str(val).startswith('-') is False and float(val.replace('%', '')) > 0):
+            colors.append('color: #3fb950')  # Green for positive
+        else:
+            colors.append('color: #f85149')  # Red for negative
+    return colors
 
 
 def _render_commodities_overview(commodities: CommoditiesFetcher):
     """Render commodities overview grid"""
-    st.markdown("#### Commodity Prices")
+    st.markdown("#### Prices")
 
     try:
         prices_data = commodities.get_current_prices()
@@ -36,50 +48,53 @@ def _render_commodities_overview(commodities: CommoditiesFetcher):
             st.info("Commodity data not available")
             return
 
-        # Create a grid layout
-        cols = st.columns(3)
+        # Create dataframe with daily, weekly, monthly changes
+        df = prices_data[['name', 'price', 'change_pct', 'weekly_pct', 'monthly_pct']].copy()
+        df.columns = ['Commodity', 'Price', 'Daily', 'Weekly', 'Monthly']
 
-        for idx, row in prices_data.iterrows():
-            col_idx = idx % 3
+        # Format price
+        df['Price'] = df['Price'].apply(lambda x: f"{x:,.2f}")
 
-            with cols[col_idx]:
-                price = row['price']
-                change_pct = row['change_pct']
-                name = row['name']
-                ticker = row['ticker']
+        # Format change columns
+        df['Daily'] = df['Daily'].apply(lambda x: f"{x:+.2f}%" if pd.notna(x) else "-")
+        df['Weekly'] = df['Weekly'].apply(lambda x: f"{x:+.2f}%" if pd.notna(x) else "-")
+        df['Monthly'] = df['Monthly'].apply(lambda x: f"{x:+.2f}%" if pd.notna(x) else "-")
 
-                # Color based on change
-                delta_color = "normal"
-                if change_pct > 0:
-                    delta_color = "normal"
-                elif change_pct < 0:
-                    delta_color = "normal"
+        # Style dataframe with conditional coloring
+        styled_df = df.style.apply(_color_change_columns, subset=['Daily', 'Weekly', 'Monthly'])
 
-                st.metric(
-                    name,
-                    f"${price:,.2f}",
-                    delta=f"{change_pct:+.2f}%",
-                    delta_color="normal"
-                )
+        # Display compact dataframe with narrow columns
+        st.dataframe(
+            styled_df,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                'Commodity': st.column_config.TextColumn(width='small'),
+                'Price': st.column_config.TextColumn(width='small'),
+                'Daily': st.column_config.TextColumn(width='small'),
+                'Weekly': st.column_config.TextColumn(width='small'),
+                'Monthly': st.column_config.TextColumn(width='small')
+            }
+        )
 
     except Exception as e:
         st.error(f"Error loading commodity data: {str(e)}")
 
 
-def _render_commodities_details(commodities: CommoditiesFetcher):
-    """Render detailed commodity view with historical chart"""
-    st.markdown("#### Commodity Details")
+def _render_commodities_chart(commodities: CommoditiesFetcher):
+    """Render commodity chart selector"""
+    st.markdown("#### Chart")
 
     # Select commodity
     commodity_options = {
-        "Crude Oil (CL=F)": "CL=F",
-        "Natural Gas (NG=F)": "NG=F",
-        "Gold (GC=F)": "GC=F",
-        "Silver (SI=F)": "SI=F",
-        "Copper (HG=F)": "HG=F",
+        "Crude Oil": "CL=F",
+        "Natural Gas": "NG=F",
+        "Gold": "GC=F",
+        "Silver": "SI=F",
+        "Copper": "HG=F",
     }
 
-    selected = st.selectbox("Select Commodity", list(commodity_options.keys()))
+    selected = st.selectbox("Select", list(commodity_options.keys()), label_visibility="collapsed")
     ticker = commodity_options[selected]
 
     try:
@@ -90,7 +105,7 @@ def _render_commodities_details(commodities: CommoditiesFetcher):
             st.info("Historical data not available")
             return
 
-        # Create price chart
+        # Compact price chart
         fig = go.Figure()
 
         fig.add_trace(go.Scatter(
@@ -98,38 +113,39 @@ def _render_commodities_details(commodities: CommoditiesFetcher):
             y=hist_data['Close'],
             mode='lines',
             name='Price',
-            line=dict(color='#1f77b4', width=2)
+            line=dict(color='#ff6b00', width=1.5)
         ))
 
         fig.update_layout(
-            title=f"{selected} - 1 Month",
-            xaxis_title="Date",
-            yaxis_title="Price ($)",
-            height=400,
-            showlegend=False
+            title=" ",
+            xaxis_title="",
+            yaxis_title="$",
+            height=280,
+            showlegend=False,
+            margin=dict(l=40, r=20, t=35, b=0),
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='#e6edf3', size=10),
+            xaxis=dict(gridcolor='#30363d', tickfont=dict(size=9), tickformat='%b %d'),
+            yaxis=dict(gridcolor='#30363d', tickfont=dict(size=9))
         )
 
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': True, 'displaylogo': False, 'scrollZoom': False})
 
-        # Statistics
-        col1, col2, col3, col4 = st.columns(4)
+        # Compact stats
+        col1, col2, col3 = st.columns(3)
+
+        current = hist_data['Close'].iloc[-1]
+        high_30d = hist_data['Close'].max()
+        low_30d = hist_data['Close'].min()
+        change_pct = ((current - hist_data['Close'].iloc[0]) / hist_data['Close'].iloc[0]) * 100
 
         with col1:
-            current = hist_data['Close'].iloc[-1]
             st.metric("Current", f"${current:,.2f}")
-
         with col2:
-            high_30d = hist_data['Close'].max()
             st.metric("30D High", f"${high_30d:,.2f}")
-
         with col3:
-            low_30d = hist_data['Close'].min()
             st.metric("30D Low", f"${low_30d:,.2f}")
 
-        with col4:
-            change = hist_data['Close'].iloc[-1] - hist_data['Close'].iloc[0]
-            change_pct = (change / hist_data['Close'].iloc[0]) * 100
-            st.metric("30D Change", f"{change_pct:+.2f}%")
-
     except Exception as e:
-        st.error(f"Error loading commodity details: {str(e)}")
+        st.error(f"Error loading chart: {str(e)}")

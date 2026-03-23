@@ -1,43 +1,41 @@
 """
 Interest Rates Panel Component
-Yield curve and key rates display
+Yield curve and key rates display - Compact version
 """
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-from data.rates import RatesFetcher
-from utils.formatters import format_yield, format_basis_points
-from utils.calculations import calculate_yield_curve_slope
+from data.treasury import TreasuryFetcher
 
 
 def render_rates_panel():
     """Render the interest rates panel"""
     st.markdown("### Interest Rates")
 
-    rates = RatesFetcher()
+    treasury = TreasuryFetcher()
 
     # Tabs for different views
-    tab1, tab2 = st.tabs(["Yield Curve", "Key Rates"])
+    tab1, tab2 = st.tabs(["Yield Curve", "Rates"])
 
     with tab1:
-        _render_yield_curve(rates)
+        _render_yield_curve(treasury)
 
     with tab2:
-        _render_key_rates(rates)
+        _render_all_rates(treasury)
 
 
-def _render_yield_curve(rates: RatesFetcher):
+def _render_yield_curve(treasury: TreasuryFetcher):
     """Render yield curve visualization"""
-    st.markdown("#### US Treasury Yield Curve")
+    st.markdown("#### Yield Curve")
 
     try:
-        yield_curve = rates.get_yield_curve()
+        yield_curve = treasury.get_yield_curve()
 
         if yield_curve.empty:
             st.info("Yield curve data not available")
             return
 
-        # Create yield curve plot
+        # Compact yield curve plot
         fig = go.Figure()
 
         fig.add_trace(go.Scatter(
@@ -45,84 +43,104 @@ def _render_yield_curve(rates: RatesFetcher):
             y=yield_curve['rate'],
             mode='lines+markers',
             name='Current',
-            line=dict(color='#1f77b4', width=2),
-            marker=dict(size=8)
+            line=dict(color='#ff6b00', width=2),
+            marker=dict(size=6, color='#ff6b00')
         ))
 
         fig.update_layout(
-            title="US Treasury Yield Curve",
-            xaxis_title="Maturity",
-            yaxis_title="Yield (%)",
-            height=400,
+            title=" ",
+            xaxis_title="",
+            yaxis_title="Yield %",
+            height=280,
             showlegend=False,
-            xaxis=dict(
-                categoryorder='array',
-                categoryarray=['3M', '6M', '1Y', '2Y', '5Y', '10Y', '30Y']
-            )
+            margin=dict(l=40, r=20, t=35, b=0),
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='#e6edf3', size=10),
+            xaxis=dict(gridcolor='#30363d', tickfont=dict(size=9)),
+            yaxis=dict(gridcolor='#30363d', tickfont=dict(size=9))
         )
 
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': True, 'displaylogo': False, 'scrollZoom': False})
 
-        # Add key spreads
+        # Compact spreads row
         col1, col2, col3 = st.columns(3)
 
-        rates_data = yield_curve.to_dict('records')
-        rates_dict = {r['maturity']: r['rate'] for r in rates_data}
+        yields = yield_curve.set_index('maturity')['rate'].to_dict()
 
         with col1:
-            if '2Y' in rates_dict and '10Y' in rates_dict:
-                spread = rates_dict['10Y'] - rates_dict['2Y']
-                st.metric("2Y-10Y Spread", f"{spread*100:.0f} bps")
+            if '2Y' in yields and '10Y' in yields:
+                spread = yields['10Y'] - yields['2Y']
+                color = "normal" if spread >= 0 else "inverse"
+                st.metric("2Y-10Y", f"{spread*100:.0f}bp", delta_color=color)
                 if spread < 0:
-                    st.caption("⚠️ Inverted yield curve")
+                    st.caption("Inverted")
 
         with col2:
-            if '3M' in rates_dict and '10Y' in rates_dict:
-                spread = rates_dict['10Y'] - rates_dict['3M']
-                st.metric("3M-10Y Spread", f"{spread*100:.0f} bps")
+            if '3M' in yields and '10Y' in yields:
+                spread = yields['10Y'] - yields['3M']
+                st.metric("3M-10Y", f"{spread*100:.0f}bp")
 
         with col3:
-            if '2Y' in rates_dict and '30Y' in rates_dict:
-                spread = rates_dict['30Y'] - rates_dict['2Y']
-                st.metric("2Y-30Y Spread", f"{spread*100:.0f} bps")
+            if '2Y' in yields and '30Y' in yields:
+                spread = yields['30Y'] - yields['2Y']
+                st.metric("2Y-30Y", f"{spread*100:.0f}bp")
 
     except Exception as e:
         st.error(f"Error loading yield curve: {str(e)}")
-        st.info("Ensure FRED_API_KEY is set in .env file")
 
 
-def _render_key_rates(rates: RatesFetcher):
-    """Render key interest rates table"""
-    st.markdown("#### Key Interest Rates")
+def _render_all_rates(treasury: TreasuryFetcher):
+    """Render all treasury rates table"""
+    st.markdown("#### Treasury Yields")
 
     try:
-        rates_data = rates.get_all_rates()
+        rates_data = treasury.get_all_rates()
 
         if rates_data.empty:
-            st.info("Rate data not available")
+            st.info("Treasury rate data not available")
             return
 
-        df = rates_data[['name', 'value', 'change', 'date']].copy()
-        df.columns = ['Rate', 'Value (%)', 'Change', 'Last Updated']
+        # Style dataframe with conditional coloring (inverse: lower yields = green)
+        def _color_change_columns(series):
+            colors = []
+            for val in series:
+                if val == '-' or pd.isna(val):
+                    colors.append('color: #8b949e')  # Gray for N/A
+                else:
+                    try:
+                        num = float(val.replace('+', ''))
+                        if num > 0:
+                            colors.append('color: #f85149')  # Red for higher yields
+                        else:
+                            colors.append('color: #3fb950')  # Green for lower yields
+                    except (ValueError, AttributeError):
+                        colors.append('color: #8b949e')
+            return colors
 
-        # Color the change column
-        def style_change(val):
-            if val > 0:
-                return 'color: green'
-            elif val < 0:
-                return 'color: red'
-            return ''
+        # Format values
+        df = rates_data.copy()
+        df['Yield'] = df['Yield'].apply(lambda x: f"{x:.3f}%" if pd.notna(x) else "-")
+        df['Daily'] = df['Daily'].apply(lambda x: f"{x:+.3f}" if pd.notna(x) and x is not None else "-")
+        df['Weekly'] = df['Weekly'].apply(lambda x: f"{x:+.3f}" if pd.notna(x) and x is not None else "-")
+        df['Monthly'] = df['Monthly'].apply(lambda x: f"{x:+.3f}" if pd.notna(x) and x is not None else "-")
+
+        styled_df = df.style.apply(_color_change_columns, subset=['Daily', 'Weekly', 'Monthly'])
 
         st.dataframe(
-            df.style.map(
-                lambda x: 'color: green' if isinstance(x, (int, float)) and x > 0
-                else ('color: red' if isinstance(x, (int, float)) and x < 0 else ''),
-                subset=['Change']
-            ),
-            width='stretch',
-            hide_index=True
+            styled_df,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                'Maturity': st.column_config.TextColumn(width='small'),
+                'Yield': st.column_config.TextColumn(width='small'),
+                'Daily': st.column_config.TextColumn(width='small'),
+                'Weekly': st.column_config.TextColumn(width='small'),
+                'Monthly': st.column_config.TextColumn(width='small')
+            }
         )
+
+        st.caption("*Treasury yields updated daily (end of day)*")
 
     except Exception as e:
         st.error(f"Error loading rate data: {str(e)}")
-        st.info("Ensure FRED_API_KEY is set in .env file")

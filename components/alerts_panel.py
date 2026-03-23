@@ -1,31 +1,25 @@
 """
 Alerts Panel Component
-DQ alerts and outlier detection
+DQ alerts and outlier detection - Compact version
 """
 import streamlit as st
 import pandas as pd
 from data.equities import EquitiesFetcher
-from data.rates import RatesFetcher
-from data.mortgages import MortgagesFetcher
 from data.commodities import CommoditiesFetcher
-from data.economic import EconomicFetcher
 from utils.dq_checks import DQChecker, OutlierType
-from utils.formatters import get_severity_color
 
 
 def render_alerts_panel():
     """Render the DQ alerts panel"""
-    st.markdown("### Data Quality Alerts")
+    st.markdown("### DQ Alerts")
 
     dq_checker = DQChecker()
 
-    all_alerts = []
-
     # Tabs for different alert types
-    tab1, tab2, tab3 = st.tabs(["All Alerts", "Outliers", "Stale/Missing Data"])
+    tab1, tab2 = st.tabs(["All", "Outliers"])
 
     # Collect alerts from all data sources
-    with st.spinner("Checking for alerts..."):
+    with st.spinner("Checking..."):
         all_alerts = _collect_all_alerts(dq_checker)
 
     with tab1:
@@ -33,9 +27,6 @@ def render_alerts_panel():
 
     with tab2:
         _render_outlier_alerts(all_alerts)
-
-    with tab3:
-        _render_data_quality_alerts(all_alerts)
 
 
 def _collect_all_alerts(dq_checker: DQChecker) -> list:
@@ -82,12 +73,12 @@ def _collect_all_alerts(dq_checker: DQChecker) -> list:
 
 
 def _render_all_alerts(alerts: list):
-    """Render all alerts"""
+    """Render all alerts in compact format"""
     if not alerts:
-        st.success("No data quality alerts at this time")
+        st.success("No alerts")
         return
 
-    st.markdown(f"**Total Alerts: {len(alerts)}**")
+    st.markdown(f"**{len(alerts)} alerts**")
 
     # Group by severity
     high_alerts = [a for a in alerts if a.severity == 'high']
@@ -95,19 +86,22 @@ def _render_all_alerts(alerts: list):
     low_alerts = [a for a in alerts if a.severity == 'low']
 
     if high_alerts:
-        st.markdown("#### High Priority")
+        st.markdown("**High:**")
         for alert in high_alerts:
-            st.error(f"⚠️ **{alert.series_name}**: {alert.message}")
+            st.markdown(f"<span style='color:#f85149'>[{alert.series_name}]</span> {alert.message}",
+                       unsafe_allow_html=True)
 
     if medium_alerts:
-        st.markdown("#### Medium Priority")
+        st.markdown("**Medium:**")
         for alert in medium_alerts:
-            st.warning(f"⚡ **{alert.series_name}**: {alert.message}")
+            st.markdown(f"<span style='color:#d29922'>[{alert.series_name}]</span> {alert.message}",
+                       unsafe_allow_html=True)
 
     if low_alerts:
-        st.markdown("#### Low Priority")
+        st.markdown("**Low:**")
         for alert in low_alerts:
-            st.info(f"ℹ️ **{alert.series_name}**: {alert.message}")
+            st.markdown(f"<span style='color:#58a6ff'>[{alert.series_name}]</span> {alert.message}",
+                       unsafe_allow_html=True)
 
 
 def _render_outlier_alerts(alerts: list):
@@ -116,90 +110,43 @@ def _render_outlier_alerts(alerts: list):
     outlier_alerts = [a for a in alerts if a.alert_type in outlier_types]
 
     if not outlier_alerts:
-        st.success("No outlier alerts detected")
+        st.success("No outliers detected")
         return
 
-    st.markdown(f"**Outlier Alerts: {len(outlier_alerts)}**")
+    st.markdown(f"**{len(outlier_alerts)} outliers**")
 
     for alert in outlier_alerts:
-        severity_emoji = "🔴" if alert.severity == 'high' else "🟡"
-        st.markdown(f"{severity_emoji} **{alert.series_name}**: {alert.message}")
-
-        if alert.value is not None:
-            st.caption(f"Value: {alert.value:.2f}%, Threshold: {alert.threshold}")
-
-
-def _render_data_quality_alerts(alerts: list):
-    """Render data quality alerts (stale, missing)"""
-    dq_types = [OutlierType.STALE_DATA, OutlierType.MISSING_DATA]
-    dq_alerts = [a for a in alerts if a.alert_type in dq_types]
-
-    if not dq_alerts:
-        st.success("No data quality issues detected")
-        return
-
-    st.markdown(f"**Data Quality Issues: {len(dq_alerts)}**")
-
-    for alert in dq_alerts:
-        severity_emoji = "🔴" if alert.severity == 'high' else "🟡"
-        alert_type = alert.alert_type.value.replace("_", " ").title()
-        st.markdown(f"{severity_emoji} **{alert.series_name}** ({alert_type}): {alert.message}")
+        severity_color = "#f85149" if alert.severity == 'high' else "#d29922"
+        st.markdown(f"<span style='color:{severity_color}'>[{alert.series_name}]</span> {alert.message}",
+                   unsafe_allow_html=True)
 
 
 def render_market_status():
-    """Render market status indicator"""
+    """Render market status indicator in sidebar"""
     from data.calendars import CalendarFetcher
-    import pandas_market_calendars as mcal
 
     calendars = CalendarFetcher()
+    st.markdown("### Market Status")
 
-    st.markdown("#### Market Status")
-
-    col1, col2, col3 = st.columns(3)
-
-    # Check US market status
     try:
         is_us_open = calendars.is_market_open("XNYS")
 
-        with col1:
-            if is_us_open:
-                st.markdown("🟢 **US Markets**: Open")
-            else:
-                st.markdown("🔴 **US Markets**: Closed")
+        if is_us_open:
+            st.markdown("**US Markets: OPEN**")
+        else:
+            st.markdown("**US Markets: CLOSED**")
 
     except Exception:
-        with col1:
-            st.markdown("⚪ **US Markets**: Unknown")
+        st.markdown("**US Markets: ?**")
 
     # Check holidays
     try:
         todays_holidays = calendars.get_todays_holidays()
 
-        with col2:
-            if not todays_holidays.empty:
-                st.markdown("📅 **Today's Holidays**:")
-                for _, row in todays_holidays.iterrows():
-                    st.caption(f"- {row['region']}: {row['holiday']}")
-            else:
-                st.markdown("📅 **No holidays today**")
+        if not todays_holidays.empty:
+            st.markdown("**Today's Holidays:**")
+            for _, row in todays_holidays.iterrows():
+                st.caption(f"{row['region']}: {row['holiday']}")
 
     except Exception:
-        with col2:
-            st.markdown("⚪ **Holiday data unavailable**")
-
-    # Upcoming holidays
-    try:
-        upcoming = calendars.get_upcoming_holidays(days=7)
-
-        with col3:
-            if not upcoming.empty:
-                st.markdown("🗓️ **Upcoming Holidays (7d)**:")
-                for _, row in upcoming.head(3).iterrows():
-                    date_str = row['date'].strftime('%Y-%m-%d') if hasattr(row['date'], 'strftime') else str(row['date'])
-                    st.caption(f"- {date_str}: {row['region']} ({row['holiday']})")
-            else:
-                st.markdown("🗓️ **No upcoming holidays**")
-
-    except Exception:
-        with col3:
-            st.markdown("⚪ **Upcoming holidays unavailable**")
+        pass

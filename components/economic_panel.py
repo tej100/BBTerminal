@@ -1,22 +1,21 @@
 """
 Economic Data Panel Component
-Key economic indicators
+Key economic indicators - Compact version
 """
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 from data.economic import EconomicFetcher
-from utils.formatters import format_number
 
 
 def render_economic_panel():
     """Render the economic indicators panel"""
-    st.markdown("### Economic Indicators")
+    st.markdown("### Economic Data")
 
     economic = EconomicFetcher()
 
     # Tabs for different views
-    tab1, tab2 = st.tabs(["Key Indicators", "Historical"])
+    tab1, tab2 = st.tabs(["Indicators", "Chart"])
 
     with tab1:
         _render_key_indicators(economic)
@@ -27,7 +26,7 @@ def render_economic_panel():
 
 def _render_key_indicators(economic: EconomicFetcher):
     """Render key economic indicators"""
-    st.markdown("#### Current Economic Data")
+    st.markdown("#### Current")
 
     try:
         indicators = economic.get_all_indicators()
@@ -36,47 +35,34 @@ def _render_key_indicators(economic: EconomicFetcher):
             st.info("Economic data not available")
             return
 
-        # Create cards for each indicator
-        cols = st.columns(2)
+        # Compact table
+        df = indicators[['name', 'value', 'yoy_change', 'mom_change']].copy()
+        df.columns = ['Indicator', 'Value', 'YoY', 'MoM']
 
-        for idx, row in indicators.iterrows():
-            col_idx = idx % 2
-
-            with cols[col_idx]:
-                st.markdown(f"**{row['name']}**")
-                st.markdown(f"Latest: **{row['value']:,.2f}**")
-                st.caption(f"Updated: {row['date']}")
-
-                if row['yoy_change'] is not None:
-                    yoy_color = "green" if row['yoy_change'] > 0 else "red"
-                    st.markdown(f"YoY: <span style='color:{yoy_color}'>{row['yoy_change']:+.2f}%</span>",
-                               unsafe_allow_html=True)
-
-                if row['mom_change'] is not None:
-                    mom_color = "green" if row['mom_change'] > 0 else "red"
-                    st.markdown(f"MoM: <span style='color:{mom_color}'>{row['mom_change']:+.2f}%</span>",
-                               unsafe_allow_html=True)
-
-                st.markdown("---")
+        st.dataframe(
+            df,
+            use_container_width=True,
+            hide_index=True,
+            height=250
+        )
 
     except Exception as e:
         st.error(f"Error loading economic data: {str(e)}")
-        st.info("Ensure FRED_API_KEY is set in .env file")
 
 
 def _render_historical_view(economic: EconomicFetcher):
     """Render historical economic data view"""
-    st.markdown("#### Historical Trends")
+    st.markdown("#### Trend")
 
     # Select indicator
     indicator_options = {
         "CPI": "CPIAUCSL",
-        "Unemployment Rate": "UNRATE",
+        "Unemployment": "UNRATE",
         "GDP": "GDP",
-        "Non-Farm Payrolls": "PAYEMS",
+        "Payrolls": "PAYEMS",
     }
 
-    selected = st.selectbox("Select Indicator", list(indicator_options.keys()))
+    selected = st.selectbox("Select", list(indicator_options.keys()), label_visibility="collapsed")
     series_id = indicator_options[selected]
 
     try:
@@ -86,7 +72,7 @@ def _render_historical_view(economic: EconomicFetcher):
             st.info("Historical data not available")
             return
 
-        # Create chart
+        # Compact chart
         fig = go.Figure()
 
         fig.add_trace(go.Scatter(
@@ -94,30 +80,25 @@ def _render_historical_view(economic: EconomicFetcher):
             y=hist_data['value'],
             mode='lines+markers',
             name=selected,
-            line=dict(color='#1f77b4', width=2),
-            marker=dict(size=6)
+            line=dict(color='#ff6b00', width=1.5),
+            marker=dict(size=4)
         ))
 
         fig.update_layout(
-            title=f"{selected} - 12 Month Trend",
-            xaxis_title="Date",
+            title=" ",
+            xaxis_title="",
             yaxis_title=selected,
-            height=400,
-            showlegend=False
+            height=280,
+            showlegend=False,
+            margin=dict(l=40, r=20, t=35, b=0),
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='#e6edf3', size=10),
+            xaxis=dict(gridcolor='#30363d', tickfont=dict(size=9), tickformat='%b %d'),
+            yaxis=dict(gridcolor='#30363d', tickfont=dict(size=9))
         )
 
-        st.plotly_chart(fig, width='stretch')
-
-        # Recent changes
-        st.markdown("#### Recent Values")
-
-        recent = hist_data.tail(6).iloc[::-1]  # Last 6 values, reversed
-
-        for _, row in recent.iterrows():
-            date = row['date'].strftime('%Y-%m-%d') if hasattr(row['date'], 'strftime') else str(row['date'])
-            value = row['value']
-
-            st.write(f"**{date}**: {value:,.2f}")
+        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': True, 'displaylogo': False, 'scrollZoom': False})
 
     except Exception as e:
         st.error(f"Error loading historical data: {str(e)}")

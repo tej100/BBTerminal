@@ -1,26 +1,67 @@
 """
 Market Summary Row Component
-Bloomberg Launchpad style top row with key indices
+Bloomberg Launchpad style top row with key indices - Compact version
 """
 import streamlit as st
 import pandas as pd
+import yfinance as yf
 from typing import Dict, Union
 from data.equities import EquitiesFetcher
-from data.rates import RatesFetcher
 from data.commodities import CommoditiesFetcher
-from utils.formatters import format_price, format_percent, get_change_color
+
+
+# Treasury yield tickers from yfinance (real-time)
+TREASURY_YIELD_TICKERS = {
+    "^TNX": ("10Y Treasury", "10Y"),
+    "^FVX": ("5Y Treasury", "5Y"),
+    "^TYX": ("30Y Treasury", "30Y"),
+    "^IRX": ("3M Treasury", "3M"),
+}
+
+
+def _fetch_treasury_yields():
+    """Fetch live treasury yields from yfinance"""
+    try:
+        tickers = list(TREASURY_YIELD_TICKERS.keys())
+        data = yf.download(tickers, period="2d", progress=False, auto_adjust=False)
+
+        if data.empty:
+            return {}
+
+        results = {}
+        for ticker, (name, maturity) in TREASURY_YIELD_TICKERS.items():
+            try:
+                # Get close prices
+                if len(tickers) == 1:
+                    closes = data['Close']
+                else:
+                    closes = data['Close'][ticker]
+
+                if len(closes) >= 2:
+                    latest = closes.iloc[-1]
+                    previous = closes.iloc[-2]
+                    change = latest - previous
+
+                    results[maturity] = {
+                        'name': name,
+                        'value': round(latest, 3),
+                        'change': round(change, 3)
+                    }
+            except Exception:
+                continue
+
+        return results
+    except Exception:
+        return {}
 
 
 def render_market_summary():
     """Render the market summary row at the top of the dashboard"""
-    st.markdown("### Market Overview")
-
-    # Create columns for major indices
+    # Create columns for major indices - 6 columns
     col1, col2, col3, col4, col5, col6 = st.columns(6)
 
     # Initialize fetchers
     equities = EquitiesFetcher()
-    rates = RatesFetcher()
     commodities = CommoditiesFetcher()
 
     # Fetch data
@@ -44,7 +85,7 @@ def render_market_summary():
         with col3:
             _render_index_card(indices_map.get('IWM', {}), "Russell 2000")
 
-        # VIX (ticker is ^VIX but display name is VIX)
+        # VIX
         with col4:
             _render_index_card(indices_map.get('^VIX', {}), "VIX", is_vix=True)
 
@@ -52,9 +93,9 @@ def render_market_summary():
         with col5:
             if not oil_data.empty:
                 row = oil_data.iloc[0]
-                _render_commodity_card(row, "Crude Oil")
+                _render_commodity_card(row, "WTI Oil")
             else:
-                st.metric("Crude Oil", "N/A")
+                st.metric("WTI Oil", "N/A")
 
         # Gold
         with col6:
@@ -66,12 +107,10 @@ def render_market_summary():
 
     except Exception as e:
         st.error(f"Error loading market summary: {str(e)}")
-        st.info("Market data may not be available during market closed hours or due to API limits.")
 
 
 def _render_index_card(data: Union[Dict, pd.Series], name: str, is_vix: bool = False):
-    """Render a single index card"""
-    # Handle both empty dict and empty Series
+    """Render a single index card using compact metric"""
     if isinstance(data, pd.Series):
         if data.empty:
             st.metric(name, "N/A")
@@ -84,17 +123,18 @@ def _render_index_card(data: Union[Dict, pd.Series], name: str, is_vix: bool = F
     change_pct = data.get('change_pct', 0)
 
     if is_vix:
-        # VIX - just show level
         st.metric(
             name,
             f"{price:.1f}",
-            delta=f"{change_pct:+.1f}%"
+            delta=f"{change_pct:+.1f}%",
+            delta_color="normal"
         )
     else:
         st.metric(
             name,
             f"{price:,.2f}",
-            delta=f"{change_pct:+.2f}%"
+            delta=f"{change_pct:+.2f}%",
+            delta_color="normal"
         )
 
 
@@ -106,43 +146,69 @@ def _render_commodity_card(data: pd.Series, name: str):
     st.metric(
         name,
         f"${price:,.2f}",
-        delta=f"{change_pct:+.2f}%"
+        delta=f"{change_pct:+.2f}%",
+        delta_color="normal"
     )
 
 
 def render_quick_stats():
-    """Render quick stats row below market summary"""
-    st.markdown("---")
-
+    """Render quick stats row with live treasury yields from yfinance"""
     col1, col2, col3, col4 = st.columns(4)
 
-    rates = RatesFetcher()
+    yields = _fetch_treasury_yields()
 
     try:
-        # Get key rates
-        ten_year = rates.get_latest_rate("GS10")
-        two_year = rates.get_latest_rate("GS2")
-        fed_funds = rates.get_latest_rate("FEDFUNDS")
-
+        # 3M Treasury
         with col1:
-            if ten_year:
-                st.metric("10Y Treasury", f"{ten_year['value']:.2f}%",
-                         delta=f"{ten_year['change']:+.2f}")
+            if '3M' in yields:
+                data = yields['3M']
+                st.metric(
+                    "3M Treasury",
+                    f"{data['value']:.2f}%",
+                    delta=f"{data['change']:+.2f}",
+                    delta_color="inverse"
+                )
+            else:
+                st.metric("3M Treasury", "N/A")
 
+        # 5Y Treasury
         with col2:
-            if two_year:
-                st.metric("2Y Treasury", f"{two_year['value']:.2f}%",
-                         delta=f"{two_year['change']:+.2f}")
+            if '5Y' in yields:
+                data = yields['5Y']
+                st.metric(
+                    "5Y Treasury",
+                    f"{data['value']:.2f}%",
+                    delta=f"{data['change']:+.2f}",
+                    delta_color="inverse"
+                )
+            else:
+                st.metric("5Y Treasury", "N/A")
 
+        # 10Y Treasury
         with col3:
-            if ten_year and two_year:
-                spread = (ten_year['value'] - two_year['value']) * 100
-                st.metric("2Y-10Y Spread", f"{spread:.0f} bps")
+            if '10Y' in yields:
+                data = yields['10Y']
+                st.metric(
+                    "10Y Treasury",
+                    f"{data['value']:.2f}%",
+                    delta=f"{data['change']:+.2f}",
+                    delta_color="inverse"
+                )
+            else:
+                st.metric("10Y Treasury", "N/A")
 
+        # 30Y Treasury
         with col4:
-            if fed_funds:
-                st.metric("Fed Funds", f"{fed_funds['value']:.2f}%",
-                         delta=f"{fed_funds['change']:+.2f}")
+            if '30Y' in yields:
+                data = yields['30Y']
+                st.metric(
+                    "30Y Treasury",
+                    f"{data['value']:.2f}%",
+                    delta=f"{data['change']:+.2f}",
+                    delta_color="inverse"
+                )
+            else:
+                st.metric("30Y Treasury", "N/A")
 
     except Exception as e:
-        st.warning("Rate data temporarily unavailable")
+        st.warning("Treasury yield data temporarily unavailable")

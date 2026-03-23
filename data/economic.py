@@ -2,10 +2,29 @@
 Economic data fetcher using FRED API
 """
 import pandas as pd
+import streamlit as st
 from typing import Optional, List
 from fredapi import Fred
 from .fetcher import DataFetcher
 from config.settings import ECONOMIC_DATA, FRED_API_KEY
+
+
+# Streamlit-cached FRED client - persists across reruns
+@st.cache_resource
+def _get_fred_client(api_key: str) -> Fred:
+    """Get cached FRED client instance."""
+    return Fred(api_key=api_key)
+
+
+# Streamlit-cached function for series data - prevents repeated API calls
+# FRED data updates daily/monthly, so cache for 6 hours
+@st.cache_data(ttl=21600)
+def _fetch_fred_series(series_id: str, _fred: Fred) -> pd.Series:
+    """
+    Fetch a FRED series.
+    Cached by Streamlit to prevent repeated API calls on widget interactions.
+    """
+    return _fred.get_series(series_id)
 
 
 class EconomicFetcher(DataFetcher):
@@ -19,11 +38,11 @@ class EconomicFetcher(DataFetcher):
 
     @property
     def fred(self) -> Fred:
-        """Lazy load FRED client"""
+        """Get FRED client (cached by Streamlit)"""
         if self._fred is None:
             if not self.api_key:
                 raise ValueError("FRED API key required. Set FRED_API_KEY in .env file")
-            self._fred = Fred(api_key=self.api_key)
+            self._fred = _get_fred_client(self.api_key)
         return self._fred
 
     def get_latest_value(self, series_id: str) -> Optional[dict]:
@@ -36,13 +55,8 @@ class EconomicFetcher(DataFetcher):
         Returns:
             Dict with latest value and metadata
         """
-        cache_key = f"econ_latest_{series_id}"
-        cached = self._get_cached(cache_key)
-        if cached is not None:
-            return cached.to_dict('records')[0] if len(cached) > 0 else None
-
         try:
-            series = self.fred.get_series(series_id)
+            series = _fetch_fred_series(series_id, self.fred)
             if series is not None and len(series) > 0:
                 latest = series.iloc[-1]
                 latest_date = series.index[-1]
@@ -61,17 +75,14 @@ class EconomicFetcher(DataFetcher):
                     if prev != 0:
                         mom_change = ((latest - prev) / abs(prev)) * 100
 
-                result = pd.DataFrame([{
+                return {
                     'series_id': series_id,
                     'name': self.series.get(series_id, series_id),
                     'value': round(latest, 2),
                     'date': latest_date.strftime('%Y-%m-%d'),
                     'yoy_change': round(yoy_change, 2) if yoy_change is not None else None,
                     'mom_change': round(mom_change, 2) if mom_change is not None else None
-                }])
-
-                self._set_cache(cache_key, result)
-                return result.to_dict('records')[0]
+                }
 
         except Exception:
             pass
@@ -99,13 +110,8 @@ class EconomicFetcher(DataFetcher):
         Returns:
             DataFrame with date and value columns
         """
-        cache_key = f"econ_hist_{series_id}_{months}"
-        cached = self._get_cached(cache_key)
-        if cached is not None:
-            return cached
-
         try:
-            series = self.fred.get_series(series_id)
+            series = _fetch_fred_series(series_id, self.fred)
 
             if series is not None:
                 # Get last N months
@@ -118,7 +124,6 @@ class EconomicFetcher(DataFetcher):
                 df['series_id'] = series_id
                 df['name'] = self.series.get(series_id, series_id)
 
-                self._set_cache(cache_key, df)
                 return df
 
         except Exception:

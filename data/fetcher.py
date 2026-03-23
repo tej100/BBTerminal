@@ -4,9 +4,10 @@ Unified data fetcher with caching
 import time
 from typing import Optional, Dict, Any
 import pandas as pd
+import streamlit as st
 
 class DataFetcher:
-    """Base class for data fetching with caching support"""
+    """Base class for data fetching with Streamlit caching support"""
 
     def __init__(self, cache_duration: int = 300):
         """
@@ -51,3 +52,16 @@ class DataFetcher:
         ]
         for key in expired_keys:
             del self._cache[key]
+
+
+def cached_fetch(ttl: int = 300):
+    """
+    Decorator for Streamlit-based caching that persists across reruns.
+
+    Use this on data fetching methods to prevent unnecessary API calls
+    when Streamlit widgets trigger page reruns.
+
+    Args:
+        ttl: Time-to-live in seconds (default 5 minutes)
+    """
+    return st.cache_data(ttl=ttl)
