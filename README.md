@@ -6,20 +6,24 @@ A Bloomberg Launchpad-style financial dashboard for daily market monitoring and 
 
 - **Market Summary**: Real-time indices overview (S&P 500, Nasdaq 100, Russell 2000, VIX)
 - **Equities Panel**: Sector performance heatmap, key stocks, corporate actions tracking
-- **Interest Rates**: US Treasury yield curve visualization and key rate monitoring
-- **Mortgage Rates**: Current mortgage rates and spreads to Treasuries
-- **Commodities**: Energy, metals, and agricultural commodity prices
-- **Economic Indicators**: CPI, Unemployment, GDP, Non-Farm Payrolls tracking
+- **Treasury Yields**: Full yield curve visualization (1M to 30Y) with daily/weekly/monthly changes
+- **Interest Rates**: Fed Funds and Treasury rates from FRED
+- **Mortgage Rates**: Current mortgage rates (30Y, 15Y, 5/1 ARM) and historical trends
+- **Commodities**: Energy, metals, and agricultural commodity futures prices
+- **Economic Indicators**: CPI, Unemployment, GDP, Non-Farm Payrolls, PCE, Retail Sales
 - **Data Quality Alerts**: Outlier detection, stale data warnings, missing data identification
 - **Holiday Calendar**: Global exchange holiday tracking (US, UK, Japan, Germany, Hong Kong, China)
+- **Corporate Actions**: Stock splits, delistings, acquisitions, IPOs from stockanalysis.com
 
 ## Data Sources
 
-| Data Type | Source | Library |
-|-----------|--------|---------|
+| Data Type | Source | Library/API |
+|-----------|--------|-------------|
 | Equities & Commodities | Yahoo Finance | `yfinance` |
+| Treasury Yield Curve | Treasury.gov | `fiscaldata.treasury.gov` XML API |
 | Interest Rates & Mortgages | FRED | `fredapi` |
 | Economic Data | FRED | `fredapi` |
+| Corporate Actions | stockanalysis.com | Web scraping |
 | Holiday Calendars | pandas-market-calendars | `pandas_market_calendars` |
 
 ## Setup
@@ -62,30 +66,35 @@ The dashboard will be available at `http://localhost:8501`
 
 ```
 BBTerminal/
-├── app.py                    # Main Streamlit application
+├── app.py                      # Main Streamlit application
 ├── config/
-│   └── settings.py           # Tickers, series IDs, thresholds
+│   └── settings.py             # Tickers, series IDs, thresholds
 ├── data/
-│   ├── fetcher.py            # Base data fetcher with caching
-│   ├── equities.py           # Equity data (yfinance)
-│   ├── rates.py              # Interest rate data (FRED)
-│   ├── mortgages.py          # Mortgage rate data (FRED)
-│   ├── commodities.py        # Commodity futures (yfinance)
-│   ├── economic.py           # Economic indicators (FRED)
-│   └── calendars.py          # Holiday calendars
+│   ├── fetcher.py              # Base data fetcher with time-based caching
+│   ├── equities.py             # Equity data (yfinance)
+│   ├── rates.py                # Interest rate data (FRED)
+│   ├── treasury.py             # Treasury yield curve (Treasury.gov API)
+│   ├── mortgages.py            # Mortgage rate data (FRED)
+│   ├── commodities.py          # Commodity futures (yfinance)
+│   ├── economic.py             # Economic indicators (FRED)
+│   ├── corporate_actions.py    # Corporate actions (stockanalysis.com)
+│   └── calendars.py            # Holiday calendars
 ├── components/
-│   ├── market_summary.py      # Top row market indices
-│   ├── equities_panel.py      # Equities grid
-│   ├── rates_panel.py         # Yield curve & rates
-│   ├── mortgages_panel.py     # Mortgage rates
-│   ├── commodities_panel.py   # Commodity prices
-│   ├── economic_panel.py      # Economic indicators
-│   ├── alerts_panel.py        # DQ alerts
-│   └── holidays_panel.py      # Holiday calendar
+│   ├── market_summary.py       # Top row market indices & quick stats
+│   ├── equities_panel.py       # Equities grid with corporate actions tab
+│   ├── rates_panel.py          # Yield curve chart & treasury yields table
+│   ├── mortgages_panel.py      # Mortgage rates & 30Y trend chart
+│   ├── commodities_panel.py    # Commodity prices & historical chart
+│   ├── economic_panel.py       # Economic indicators & historical chart
+│   ├── alerts_panel.py         # DQ alerts & market status
+│   └── holidays_panel.py       # Holiday calendar
+├── styles/
+│   └── theme.py                # Centralized Bloomberg-style CSS
 ├── utils/
-│   ├── dq_checks.py           # Outlier detection, gap identification
-│   ├── calculations.py        # Returns, volatility, z-scores
-│   └── formatters.py          # Display formatting
+│   ├── dq_checks.py            # Outlier detection, gap identification
+│   ├── calculations.py         # Returns, volatility, z-scores
+│   └── formatters.py           # Display formatting
+├── _archive/                   # Deprecated modules
 ├── requirements.txt
 └── .env
 ```
@@ -99,8 +108,16 @@ The dashboard auto-refreshes data every 5 minutes. Press `R` to manually refresh
 - **Outlier Detection**: Z-score based volatility spike detection
 - **Stale Data Warnings**: Alerts for data not updated within expected timeframe
 - **Missing Data**: Gap identification in time series
-- **Corporate Actions**: Recent dividends and stock splits
+- **Corporate Actions**: Stock splits, delistings, acquisitions, IPOs, symbol changes
 - **Holiday Awareness**: Cross-reference missing data with market holidays
+
+## Styling
+
+The dashboard uses a centralized Bloomberg-style theme (`styles/theme.py`) with:
+- Dark color palette optimized for financial data
+- JetBrains Mono for numeric data, Inter for text
+- Compact card components for metrics
+- Plotly chart styling with transparent backgrounds
 
 ## Customization
 
