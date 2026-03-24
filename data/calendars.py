@@ -40,34 +40,28 @@ class CalendarFetcher(DataFetcher):
             DataFrame with exchange, region, and holiday name
         """
         today = date.today()
+        start_ts = pd.Timestamp(today)
+        end_ts = pd.Timestamp(today)
 
         results = []
         for region, exchange_code in self.calendars.items():
             try:
                 cal = mcal.get_calendar(exchange_code)
-                # Get holidays for today's year
-                start = today.replace(month=1, day=1)
-                end = today.replace(month=12, day=31)
+                rh = cal.regular_holidays
 
-                schedule = cal.schedule(start_date=start, end_date=end)
-                holidays = cal.holidays()
-
-                # Check if today is a holiday
-                if hasattr(holidays, 'holidays'):
-                    holiday_dates = holidays.holidays
-                    for h in holiday_dates:
-                        if hasattr(h, 'date'):
-                            h_date = h.date()
-                        else:
-                            h_date = pd.to_datetime(h).date()
-
-                        if h_date == today:
-                            results.append({
-                                'region': region,
-                                'exchange': exchange_code,
-                                'holiday': str(h),
-                                'date': today
-                            })
+                if rh:
+                    for rule in rh.rules:
+                        try:
+                            result = rule.dates(start_ts, end_ts, return_name=True)
+                            for ts, name in result.items():
+                                results.append({
+                                    'region': region,
+                                    'exchange': exchange_code,
+                                    'holiday': name,
+                                    'date': ts.date()
+                                })
+                        except Exception:
+                            continue
 
             except Exception:
                 continue
@@ -82,36 +76,36 @@ class CalendarFetcher(DataFetcher):
             days: Number of days to look ahead
 
         Returns:
-            DataFrame with upcoming holidays
+            DataFrame with upcoming holidays with holiday names
         """
         today = date.today()
         end_date = today + timedelta(days=days)
+        start_ts = pd.Timestamp(today)
+        end_ts = pd.Timestamp(end_date)
+
         results = []
 
         for region, exchange_code in self.calendars.items():
             try:
                 cal = mcal.get_calendar(exchange_code)
+                rh = cal.regular_holidays
 
-                # Get schedule for the period
-                start = today - timedelta(days=7)  # Start slightly before
-                schedule = cal.schedule(start_date=start, end_date=end_date)
-
-                # Get holidays
-                holidays = cal.holidays()
-                if hasattr(holidays, 'holidays'):
-                    for h in holidays.holidays:
-                        if hasattr(h, 'date'):
-                            h_date = h.date()
-                        else:
-                            h_date = pd.to_datetime(h).date()
-
-                        if today <= h_date <= end_date:
-                            results.append({
-                                'region': region,
-                                'exchange': exchange_code,
-                                'holiday': str(h),
-                                'date': h_date
-                            })
+                if rh:
+                    for rule in rh.rules:
+                        try:
+                            result = rule.dates(start_ts, end_ts, return_name=True)
+                            for ts, name in result.items():
+                                h_date = ts.date()
+                                # Filter to only dates in our range
+                                if today <= h_date <= end_date:
+                                    results.append({
+                                        'region': region,
+                                        'exchange': exchange_code,
+                                        'holiday': name,
+                                        'date': h_date
+                                    })
+                        except Exception:
+                            continue
 
             except Exception:
                 continue

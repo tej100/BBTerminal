@@ -93,9 +93,9 @@ def render_market_summary():
         with col5:
             if not oil_data.empty:
                 row = oil_data.iloc[0]
-                _render_commodity_card(row, "WTI Oil")
+                _render_commodity_card(row, "Crude Oil")
             else:
-                st.metric("WTI Oil", "N/A")
+                st.metric("Crude Oil", "N/A")
 
         # Gold
         with col6:

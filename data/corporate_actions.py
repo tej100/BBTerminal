@@ -3,13 +3,15 @@ Corporate Actions Calendar fetcher from stockanalysis.com
 """
 import pandas as pd
 import requests
-import re
+import os
 import streamlit as st
 from datetime import datetime
 from bs4 import BeautifulSoup
-from typing import Optional
 from .fetcher import DataFetcher
+from dotenv import load_dotenv
 
+# Load environment variables from .env file
+load_dotenv()
 
 # Streamlit-cached function for API calls - persists across page reruns
 @st.cache_data(ttl=300)
@@ -22,22 +24,44 @@ def _fetch_actions_html(year: int) -> list:
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
     }
+    # Build proxies from environment variables if set
+    proxy_user = os.getenv('PROXY_USER')
+    proxy_pass = os.getenv('PROXY_PASS')
+    proxy_host = os.getenv('PROXY_HOST')
+    proxy_port = os.getenv('PROXY_PORT')
+    proxies = None
+    if proxy_user and proxy_pass and proxy_host and proxy_port:
+        proxy_url = f"http://{proxy_user}:{proxy_pass}@{proxy_host}:{proxy_port}"
+        proxies = {
+            'http': proxy_url,
+            'https': proxy_url
+        }
+    # Disable SSL verification only if using proxy (required for some corporate proxies)
+    verify_ssl = proxies is None
 
     try:
         url = f"{base_url}/{year}/"
-        response = requests.get(url, headers=headers, timeout=30)
+        response = requests.get(url, headers=headers, timeout=30, proxies=proxies, verify=verify_ssl)
         response.raise_for_status()
-
         data = _parse_html_table(response.text)
-
         if not data:
             # Fallback: try fetching main page
-            response = requests.get(base_url + "/", headers=headers, timeout=30)
+            response = requests.get(base_url + "/", headers=headers, timeout=30, proxies=proxies, verify=verify_ssl)
             response.raise_for_status()
             data = _parse_html_table(response.text)
-
         return data
-    except Exception:
+
+    except requests.exceptions.ProxyError as e:
+        st.error(f"Proxy error: {e}. Please check your proxy settings.")
+        return []
+    except requests.exceptions.ConnectTimeout as e:
+        st.error(f"Connection timed out: {e}")
+        return []
+    except requests.exceptions.RequestException as e:
+        st.error(f"Error fetching corporate actions data: {e}")
+        return []
+    except Exception as e:
+        st.error(f"Error fetching corporate actions: {e}")
         return []
 
 
