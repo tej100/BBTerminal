@@ -4,7 +4,7 @@ Equities data fetcher using yfinance
 import yfinance as yf
 import pandas as pd
 import streamlit as st
-from typing import Dict, List, Optional
+from typing import Dict, List
 from .fetcher import DataFetcher
 from config.settings import EQUITY_INDICES, SECTOR_ETFS
 

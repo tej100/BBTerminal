@@ -6,7 +6,7 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 from data.mortgages import MortgagesFetcher
-from data.rates import RatesFetcher
+from data.treasury import TreasuryFetcher
 
 
 def render_mortgages_panel():
@@ -48,21 +48,25 @@ def _render_current_rates(mortgages: MortgagesFetcher):
             height=150
         )
 
-        # Spreads to 10Y Treasury
+        # Spreads to 10Y Treasury (from treasury.gov)
         st.markdown("#### Spread to 10Y")
 
-        rates = RatesFetcher()
-        ten_year = rates.get_latest_rate("GS10")
+        treasury = TreasuryFetcher()
+        yields = treasury.get_latest_yields()
 
-        if ten_year:
-            col1, col2, col3 = st.columns(3)
+        if not yields.empty:
+            ten_year_row = yields[yields['maturity'] == '10Y']
+            if not ten_year_row.empty:
+                ten_year_rate = ten_year_row.iloc[0]['rate']
 
-            for idx, row in rates_data.iterrows():
-                spread = row['value'] - ten_year['value']
-                name = row['name'].replace(" Mortgage", "").replace(" Fixed", "")
+                col1, col2, col3 = st.columns(3)
 
-                with [col1, col2, col3][idx % 3]:
-                    st.metric(f"{name}", f"{spread*100:.0f}bp")
+                for idx, row in rates_data.iterrows():
+                    spread = row['value'] - ten_year_rate
+                    name = row['name'].replace(" Mortgage", "").replace(" Fixed", "")
+
+                    with [col1, col2, col3][idx % 3]:
+                        st.metric(f"{name}", f"{spread*100:.0f}bp")
 
     except Exception as e:
         st.error(f"Error loading mortgage data: {str(e)}")

@@ -1,7 +1,5 @@
-from .fetcher import DataFetcher
-from .equities import EquitiesFetcher
-from .rates import RatesFetcher
-from .mortgages import MortgagesFetcher
-from .commodities import CommoditiesFetcher
-from .economic import EconomicFetcher
-from .calendars import CalendarFetcher
+# BBTerminal Data Package
+# Import directly: from data.X import Y
+# Available: DataFetcher, EquitiesFetcher, MortgagesFetcher,
+#            CommoditiesFetcher, EconomicFetcher, CalendarFetcher,
+#            TreasuryFetcher, CorporateActionsFetcher

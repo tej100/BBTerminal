@@ -7,7 +7,6 @@ A Bloomberg Launchpad-style financial dashboard for daily market monitoring and 
 - **Market Summary**: Real-time indices overview (S&P 500, Nasdaq 100, Russell 2000, VIX)
 - **Equities Panel**: Sector performance heatmap, key stocks, corporate actions tracking
 - **Treasury Yields**: Full yield curve visualization (1M to 30Y) with daily/weekly/monthly changes
-- **Interest Rates**: Fed Funds and Treasury rates from FRED
 - **Mortgage Rates**: Current mortgage rates (30Y, 15Y, 5/1 ARM) and historical trends
 - **Commodities**: Energy, metals, and agricultural commodity futures prices
 - **Economic Indicators**: CPI, Unemployment, GDP, Non-Farm Payrolls, PCE, Retail Sales
@@ -21,7 +20,7 @@ A Bloomberg Launchpad-style financial dashboard for daily market monitoring and 
 |-----------|--------|-------------|
 | Equities & Commodities | Yahoo Finance | `yfinance` |
 | Treasury Yield Curve | Treasury.gov | `fiscaldata.treasury.gov` XML API |
-| Interest Rates & Mortgages | FRED | `fredapi` |
+| Mortgages | FRED | `fredapi` |
 | Economic Data | FRED | `fredapi` |
 | Corporate Actions | stockanalysis.com | Web scraping |
 | Holiday Calendars | pandas-market-calendars | `pandas_market_calendars` |
@@ -72,7 +71,6 @@ BBTerminal/
 ├── data/
 │   ├── fetcher.py              # Base data fetcher with time-based caching
 │   ├── equities.py             # Equity data (yfinance)
-│   ├── rates.py                # Interest rate data (FRED)
 │   ├── treasury.py             # Treasury yield curve (Treasury.gov API)
 │   ├── mortgages.py            # Mortgage rate data (FRED)
 │   ├── commodities.py          # Commodity futures (yfinance)
@@ -91,10 +89,7 @@ BBTerminal/
 ├── styles/
 │   └── theme.py                # Centralized Bloomberg-style CSS
 ├── utils/
-│   ├── dq_checks.py            # Outlier detection, gap identification
-│   ├── calculations.py         # Returns, volatility, z-scores
-│   └── formatters.py           # Display formatting
-├── _archive/                   # Deprecated modules
+│   └── dq_checks.py            # Outlier detection, gap identification
 ├── requirements.txt
 └── .env
 ```

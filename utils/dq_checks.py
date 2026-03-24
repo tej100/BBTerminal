@@ -3,7 +3,7 @@ Data Quality checks for time series analysis
 """
 import pandas as pd
 import numpy as np
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional
 from enum import Enum
 from dataclasses import dataclass
 from config.settings import ZSCORE_THRESHOLD, VOLATILITY_WINDOW

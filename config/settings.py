@@ -9,12 +9,9 @@ load_dotenv()
 # API Keys
 FRED_API_KEY = os.getenv("FRED_API_KEY", "")
 
-# Refresh interval in seconds (5-15 minutes)
-REFRESH_INTERVAL = 300  # 5 minutes
-
 # Outlier detection thresholds
-ZSCORE_THRESHOLD = 2.0  # Flag moves > 2 standard deviations
-VOLATILITY_WINDOW = 20  # 20-day rolling volatility
+ZSCORE_THRESHOLD = 1.0  # Flag moves > 1 standard deviations
+VOLATILITY_WINDOW = 30  # 30-day rolling volatility
 
 # Equities Configuration
 EQUITY_INDICES = {
@@ -37,18 +34,6 @@ SECTOR_ETFS = {
     "XLC": "Communication Services",
 }
 
-# Interest Rates (FRED Series IDs)
-INTEREST_RATES = {
-    "FEDFUNDS": "Fed Funds Rate",
-    "GS2": "2Y Treasury",
-    "GS5": "5Y Treasury",
-    "GS10": "10Y Treasury",
-    "GS30": "30Y Treasury",
-    "DGS3MO": "3M Treasury",
-    "DGS6MO": "6M Treasury",
-    "DGS1": "1Y Treasury",
-}
-
 # Mortgage Rates (FRED Series IDs)
 MORTGAGE_RATES = {
     "MORTGAGE30US": "30Y Fixed Mortgage",
@@ -65,6 +50,8 @@ COMMODITIES = {
     "HG=F": "Copper",
     "ZC=F": "Corn",
     "ZW=F": "Wheat",
+    "ZS=F": "Soybeans",
+    "OJ=F": "Orange Juice",
 }
 
 # Economic Data (FRED Series IDs)

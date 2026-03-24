@@ -4,7 +4,7 @@ Holiday calendar and corporate actions fetcher
 import pandas as pd
 import streamlit as st
 from datetime import date, timedelta
-from typing import Dict, List, Optional
+from typing import List, Optional
 import pandas_market_calendars as mcal
 from .fetcher import DataFetcher
 from config.settings import EXCHANGE_CALENDARS

@@ -121,25 +121,3 @@ class MortgagesFetcher(DataFetcher):
             pass
 
         return pd.DataFrame()
-
-    def get_spread_to_10y(self) -> pd.DataFrame:
-        """
-        Calculate mortgage spread to 10Y Treasury
-
-        Returns:
-            DataFrame with mortgage spreads
-        """
-        from .rates import RatesFetcher
-
-        rates_fetcher = RatesFetcher()
-        ten_year = rates_fetcher.get_latest_rate("GS10")
-
-        if not ten_year:
-            return pd.DataFrame()
-
-        mortgage_rates = self.get_all_rates()
-        if mortgage_rates.empty:
-            return pd.DataFrame()
-
-        mortgage_rates['spread'] = mortgage_rates['value'] - ten_year['value']
-        return mortgage_rates

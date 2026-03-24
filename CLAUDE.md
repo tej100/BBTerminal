@@ -36,13 +36,11 @@ Streamlit UI panels with tabs for different views:
 
 ### Configuration (`config/settings.py`)
 - FRED API key from `.env` (`FRED_API_KEY`)
-- Ticker dictionaries: `EQUITY_INDICES`, `SECTOR_ETFS`, `KEY_STOCKS`, `INTEREST_RATES`, `MORTGAGE_RATES`, `COMMODITIES`, `ECONOMIC_DATA`
+- Ticker dictionaries: `EQUITY_INDICES`, `SECTOR_ETFS`, `MORTGAGE_RATES`, `COMMODITIES`, `ECONOMIC_DATA`
 - DQ thresholds, refresh intervals, exchange calendars
 
 ### Utilities (`utils/`)
 - `dq_checks.py` - `DQChecker` for outlier/stale data detection
-- `calculations.py` - Returns, volatility, z-score calculations
-- `formatters.py` - Display formatting utilities
 
 ## Key Patterns
 
@@ -91,4 +89,3 @@ Get free key at https://fred.stlouisfed.org/docs/api/api_key.html
 | `data/fetcher.py` | Base DataFetcher class with caching |
 | `data/treasury.py` | Treasury yield curve data |
 | `data/corporate_actions.py` | Corporate actions calendar |
-| `_archive/` | Deprecated modules (news, etc.) |

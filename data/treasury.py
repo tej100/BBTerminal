@@ -4,7 +4,7 @@ Treasury Yield Curve data fetcher using fiscaldata.treasury.gov API
 import pandas as pd
 import requests
 import streamlit as st
-from typing import Optional, List
+from typing import Optional
 from datetime import datetime
 from .fetcher import DataFetcher
 

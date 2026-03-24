@@ -3,7 +3,7 @@ Economic data fetcher using FRED API
 """
 import pandas as pd
 import streamlit as st
-from typing import Optional, List
+from typing import Optional
 from fredapi import Fred
 from .fetcher import DataFetcher
 from config.settings import ECONOMIC_DATA, FRED_API_KEY

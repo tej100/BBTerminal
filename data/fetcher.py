@@ -54,14 +54,3 @@ class DataFetcher:
             del self._cache[key]
 
 
-def cached_fetch(ttl: int = 300):
-    """
-    Decorator for Streamlit-based caching that persists across reruns.
-
-    Use this on data fetching methods to prevent unnecessary API calls
-    when Streamlit widgets trigger page reruns.
-
-    Args:
-        ttl: Time-to-live in seconds (default 5 minutes)
-    """
-    return st.cache_data(ttl=ttl)

@@ -3,24 +3,6 @@ BBTerminal Theme Module
 Centralized Bloomberg-style CSS for professional dashboard appearance
 """
 
-# Color Palette
-COLORS = {
-    'bg_primary': '#0d1117',
-    'bg_secondary': '#161b22',
-    'bg_tertiary': '#21262d',
-    'bg_card': '#1c2128',
-    'text_primary': '#e6edf3',
-    'text_secondary': '#8b949e',
-    'text_muted': '#6e7681',
-    'accent_orange': '#ff6b00',
-    'accent_orange_dim': '#ff6b0033',
-    'positive': '#3fb950',
-    'negative': '#f85149',
-    'warning': '#d29922',
-    'info': '#58a6ff',
-    'border': '#30363d',
-}
-
 # Base CSS applied to all pages
 BASE_CSS = """
 <style>
@@ -414,33 +396,6 @@ HEADER_CSS = """
 """
 
 
-def get_metric_card_html(label: str, value: str, change: str = None, is_positive: bool = None) -> str:
-    """
-    Generate HTML for a compact metric card.
-
-    Args:
-        label: Metric label text
-        value: Main value to display
-        change: Optional change/delta text
-        is_positive: Whether change is positive (for color). None = neutral.
-
-    Returns:
-        HTML string for the metric card
-    """
-    change_html = ""
-    if change:
-        change_class = "positive" if is_positive is True else ("negative" if is_positive is False else "")
-        change_html = f'<div class="change {change_class}">{change}</div>'
-
-    return f"""
-    <div class="metric-card">
-        <div class="label">{label}</div>
-        <div class="value">{value}</div>
-        {change_html}
-    </div>
-    """
-
-
 def apply_theme():
     """Apply all theme CSS to the Streamlit app."""
     import streamlit as st
@@ -468,15 +423,3 @@ def render_header():
     """, unsafe_allow_html=True)
 
 
-def get_status_badge(is_open: bool) -> str:
-    """Generate HTML for a market status badge."""
-    status_class = "status-open" if is_open else "status-closed"
-    status_text = "OPEN" if is_open else "CLOSED"
-    dot_color = "#3fb950" if is_open else "#f85149"
-
-    return f"""
-    <span class="status-indicator {status_class}">
-        <span style="width: 6px; height: 6px; border-radius: 50%; background: {dot_color};"></span>
-        {status_text}
-    </span>
-    """
