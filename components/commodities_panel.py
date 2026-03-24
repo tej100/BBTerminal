@@ -6,6 +6,7 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 from data.commodities import CommoditiesFetcher
+from config.settings import COMMODITIES
 
 
 def render_commodities_panel():
@@ -85,14 +86,8 @@ def _render_commodities_chart(commodities: CommoditiesFetcher):
     """Render commodity chart selector"""
     st.markdown("#### Chart")
 
-    # Select commodity
-    commodity_options = {
-        "Crude Oil": "CL=F",
-        "Natural Gas": "NG=F",
-        "Gold": "GC=F",
-        "Silver": "SI=F",
-        "Copper": "HG=F",
-    }
+    # Select commodity - use config dict (inverted: name -> ticker)
+    commodity_options = {name: ticker for ticker, name in COMMODITIES.items()}
 
     selected = st.selectbox("Select", list(commodity_options.keys()), label_visibility="collapsed")
     ticker = commodity_options[selected]

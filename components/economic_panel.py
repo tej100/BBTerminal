@@ -6,6 +6,7 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 from data.economic import EconomicFetcher
+from config.settings import ECONOMIC_DATA
 
 
 def render_economic_panel():
@@ -54,13 +55,8 @@ def _render_historical_view(economic: EconomicFetcher):
     """Render historical economic data view"""
     st.markdown("#### Trend")
 
-    # Select indicator
-    indicator_options = {
-        "CPI": "CPIAUCSL",
-        "Unemployment": "UNRATE",
-        "GDP": "GDP",
-        "Payrolls": "PAYEMS",
-    }
+    # Select indicator - use config dict (inverted: name -> series_id)
+    indicator_options = {name: series_id for series_id, name in ECONOMIC_DATA.items()}
 
     selected = st.selectbox("Select", list(indicator_options.keys()), label_visibility="collapsed")
     series_id = indicator_options[selected]
