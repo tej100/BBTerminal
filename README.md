@@ -40,13 +40,8 @@ pip install -r requirements.txt
 
 ### 3. Configure Environment
 
-Copy `.env.example` to `.env` and add your FRED API key:
+Add your FRED API key to `.env`:
 
-```bash
-cp .env.example .env
-```
-
-Edit `.env`:
 ```
 FRED_API_KEY=your_actual_api_key_here
 ```

@@ -40,8 +40,6 @@ def _color_change_columns(series):
 
 def _render_commodities_overview(commodities: CommoditiesFetcher):
     """Render commodities overview grid"""
-    st.markdown("#### Prices")
-
     try:
         prices_data = commodities.get_current_prices()
 
@@ -67,7 +65,7 @@ def _render_commodities_overview(commodities: CommoditiesFetcher):
         # Display compact dataframe with narrow columns
         st.dataframe(
             styled_df,
-            use_container_width=True,
+            width='stretch',
             hide_index=True,
             column_config={
                 'Commodity': st.column_config.TextColumn(width='small'),
@@ -84,8 +82,6 @@ def _render_commodities_overview(commodities: CommoditiesFetcher):
 
 def _render_commodities_chart(commodities: CommoditiesFetcher):
     """Render commodity chart selector"""
-    st.markdown("#### Chart")
-
     # Select commodity - use config dict (inverted: name -> ticker)
     commodity_options = {name: ticker for ticker, name in COMMODITIES.items()}
 
@@ -125,7 +121,7 @@ def _render_commodities_chart(commodities: CommoditiesFetcher):
             yaxis=dict(gridcolor='#30363d', tickfont=dict(size=9))
         )
 
-        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': True, 'displaylogo': False, 'scrollZoom': False})
+        st.plotly_chart(fig, width='stretch', config={'displayModeBar': True, 'displaylogo': False, 'scrollZoom': False})
 
         # Compact stats
         col1, col2, col3 = st.columns(3)

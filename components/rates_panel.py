@@ -26,8 +26,6 @@ def render_rates_panel():
 
 def _render_yield_curve(treasury: TreasuryFetcher):
     """Render yield curve visualization"""
-    st.markdown("#### Yield Curve")
-
     try:
         yield_curve = treasury.get_yield_curve()
 
@@ -61,7 +59,7 @@ def _render_yield_curve(treasury: TreasuryFetcher):
             yaxis=dict(gridcolor='#30363d', tickfont=dict(size=9))
         )
 
-        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': True, 'displaylogo': False, 'scrollZoom': False})
+        st.plotly_chart(fig, width='stretch', config={'displayModeBar': True, 'displaylogo': False, 'scrollZoom': False})
 
         # Compact spreads row
         col1, col2, col3 = st.columns(3)
@@ -92,8 +90,6 @@ def _render_yield_curve(treasury: TreasuryFetcher):
 
 def _render_all_rates(treasury: TreasuryFetcher):
     """Render all treasury rates table"""
-    st.markdown("#### Treasury Yields")
-
     try:
         rates_data = treasury.get_all_rates()
 
@@ -120,23 +116,26 @@ def _render_all_rates(treasury: TreasuryFetcher):
 
         # Format values
         df = rates_data.copy()
-        df['Yield'] = df['Yield'].apply(lambda x: f"{x:.3f}%" if pd.notna(x) else "-")
-        df['Daily'] = df['Daily'].apply(lambda x: f"{x:+.3f}" if pd.notna(x) and x is not None else "-")
-        df['Weekly'] = df['Weekly'].apply(lambda x: f"{x:+.3f}" if pd.notna(x) and x is not None else "-")
-        df['Monthly'] = df['Monthly'].apply(lambda x: f"{x:+.3f}" if pd.notna(x) and x is not None else "-")
+        df['Yield'] = df['Yield'].apply(lambda x: f"{x:.2f}%" if pd.notna(x) else "-")
+        df['Daily (bps)'] = df['Daily'].apply(lambda x: f"{x*100:+.0f}" if pd.notna(x) and x is not None else "-")
+        df['Weekly (bps)'] = df['Weekly'].apply(lambda x: f"{x*100:+.0f}" if pd.notna(x) and x is not None else "-")
+        df['Monthly (bps)'] = df['Monthly'].apply(lambda x: f"{x*100:+.0f}" if pd.notna(x) and x is not None else "-")
+        
+        # Drop old columns
+        df = df[['Maturity', 'Yield', 'Daily (bps)', 'Weekly (bps)', 'Monthly (bps)']]
 
-        styled_df = df.style.apply(_color_change_columns, subset=['Daily', 'Weekly', 'Monthly'])
+        styled_df = df.style.apply(_color_change_columns, subset=['Daily (bps)', 'Weekly (bps)', 'Monthly (bps)'])
 
         st.dataframe(
             styled_df,
-            use_container_width=True,
+            width='stretch',
             hide_index=True,
             column_config={
                 'Maturity': st.column_config.TextColumn(width='small'),
                 'Yield': st.column_config.TextColumn(width='small'),
-                'Daily': st.column_config.TextColumn(width='small'),
-                'Weekly': st.column_config.TextColumn(width='small'),
-                'Monthly': st.column_config.TextColumn(width='small')
+                'Daily (bps)': st.column_config.TextColumn(width='small'),
+                'Weekly (bps)': st.column_config.TextColumn(width='small'),
+                'Monthly (bps)': st.column_config.TextColumn(width='small')
             }
         )
 

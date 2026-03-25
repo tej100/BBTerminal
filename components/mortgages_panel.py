@@ -5,15 +5,16 @@ Mortgage rates and spreads - Compact version
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-from data.mortgages import MortgagesFetcher
+from data.fred_fetcher import FredFetcher
 from data.treasury import TreasuryFetcher
+from config.settings import MORTGAGE_RATES
 
 
 def render_mortgages_panel():
     """Render the mortgages panel"""
     st.markdown("### Mortgage Rates")
 
-    mortgages = MortgagesFetcher()
+    mortgages = FredFetcher(series_dict=MORTGAGE_RATES)
 
     # Tabs for different views
     tab1, tab2 = st.tabs(["Rates", "Trend"])
@@ -25,10 +26,8 @@ def render_mortgages_panel():
         _render_historical_trend(mortgages)
 
 
-def _render_current_rates(mortgages: MortgagesFetcher):
+def _render_current_rates(mortgages: FredFetcher):
     """Render current mortgage rates"""
-    st.markdown("#### Current")
-
     try:
         rates_data = mortgages.get_all_rates()
 
@@ -36,16 +35,47 @@ def _render_current_rates(mortgages: MortgagesFetcher):
             st.info("Mortgage rate data not available")
             return
 
-        # Compact dataframe
-        df = rates_data[['name', 'value', 'change']].copy()
-        df['name'] = df['name'].str.replace(' Mortgage', '').str.replace(' Fixed', '')
-        df.columns = ['Type', 'Rate', 'Chg']
+        # Style dataframe with conditional coloring
+        def _color_change_columns(series):
+            colors = []
+            for val in series:
+                if val == '-' or pd.isna(val):
+                    colors.append('color: #8b949e')  # Gray for N/A
+                else:
+                    try:
+                        num = float(val.replace('+', ''))
+                        if num > 0:
+                            colors.append('color: #f85149')  # Red for higher
+                        else:
+                            colors.append('color: #3fb950')  # Green for lower
+                    except (ValueError, AttributeError):
+                        colors.append('color: #8b949e')
+            return colors
+
+        # Format dataframe
+        df = rates_data.copy()
+        df['Type'] = df['name'].str.replace(' Mortgage', '').str.replace(' Fixed', '')
+        df['Rate'] = df['value'].apply(lambda x: f"{x:.2f}%" if pd.notna(x) else "-")
+        df['Daily (bps)'] = df['daily'].apply(lambda x: f"{x*100:+.0f}" if pd.notna(x) else "-")
+        df['Weekly (bps)'] = df['weekly'].apply(lambda x: f"{x*100:+.0f}" if pd.notna(x) else "-")
+        df['Monthly (bps)'] = df['monthly'].apply(lambda x: f"{x*100:+.0f}" if pd.notna(x) else "-")
+        
+        # Select and reorder columns
+        df = df[['Type', 'Rate', 'Daily (bps)', 'Weekly (bps)', 'Monthly (bps)']]
+
+        styled_df = df.style.apply(_color_change_columns, subset=['Daily (bps)', 'Weekly (bps)', 'Monthly (bps)'])
 
         st.dataframe(
-            df,
-            use_container_width=True,
+            styled_df,
+            width='stretch',
             hide_index=True,
-            height=150
+            column_config={
+                'Type': st.column_config.TextColumn(width='small'),
+                'Rate': st.column_config.TextColumn(width='small'),
+                'Daily (bps)': st.column_config.TextColumn(width='small'),
+                'Weekly (bps)': st.column_config.TextColumn(width='small'),
+                'Monthly (bps)': st.column_config.TextColumn(width='small')
+            }
         )
 
         # Spreads to 10Y Treasury (from treasury.gov)
@@ -72,12 +102,15 @@ def _render_current_rates(mortgages: MortgagesFetcher):
         st.error(f"Error loading mortgage data: {str(e)}")
 
 
-def _render_historical_trend(mortgages: MortgagesFetcher):
-    """Render historical mortgage rate trends"""
-    st.markdown("#### 30Y Fixed")
+def _render_historical_trend(mortgages: FredFetcher):
+    """Render historical mortgage rate trends with dynamic dropdown"""
+    # Create dropdown menu - use config dict (inverted: name -> series_id)
+    mortgage_options = {name: series_id for series_id, name in MORTGAGE_RATES.items()}
+    selected = st.selectbox("Select", list(mortgage_options.keys()), label_visibility="collapsed")
+    series_id = mortgage_options[selected]
 
     try:
-        hist_data = mortgages.get_historical_rates("MORTGAGE30US", days=30)
+        hist_data = mortgages.get_historical_rates(series_id, days=30)
 
         if hist_data.empty:
             st.info("Historical data not available")
@@ -90,7 +123,7 @@ def _render_historical_trend(mortgages: MortgagesFetcher):
             x=hist_data['date'],
             y=hist_data['value'],
             mode='lines',
-            name='30Y Fixed',
+            name=selected,
             line=dict(color='#ff6b00', width=1.5)
         ))
 
@@ -108,7 +141,7 @@ def _render_historical_trend(mortgages: MortgagesFetcher):
             yaxis=dict(gridcolor='#30363d', tickfont=dict(size=9))
         )
 
-        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': True, 'displaylogo': False, 'scrollZoom': False})
+        st.plotly_chart(fig, width='stretch', config={'displayModeBar': True, 'displaylogo': False, 'scrollZoom': False})
 
         # Compact stats
         col1, col2, col3 = st.columns(3)

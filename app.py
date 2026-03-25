@@ -3,6 +3,9 @@ BBTerminal - Bloomberg Launchpad Style Dashboard
 A comprehensive financial market monitoring dashboard for daily DQ workflow
 """
 import streamlit as st
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Configure page FIRST before any other Streamlit commands
 st.set_page_config(
@@ -18,7 +21,7 @@ from styles.theme import apply_theme, render_header
 apply_theme()
 
 # Import components
-from components.market_summary import render_market_summary, render_quick_stats
+from components.market_summary import render_market_summary
 from components.equities_panel import render_equities_panel
 from components.rates_panel import render_rates_panel
 from components.mortgages_panel import render_mortgages_panel
@@ -49,11 +52,6 @@ def main():
             render_market_summary()
         except Exception as e:
             st.warning(f"Market summary temporarily unavailable: {str(e)}")
-
-        try:
-            render_quick_stats()
-        except Exception as e:
-            st.warning("Rate data temporarily unavailable")
 
         # Right column: Rates, Commodities, Mortgages in a row
         col_r1, col_r2, col_r3 = st.columns([1, 1, 1])

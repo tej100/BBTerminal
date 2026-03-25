@@ -14,11 +14,18 @@ ZSCORE_THRESHOLD = 1.0  # Flag moves > 1 standard deviations
 VOLATILITY_WINDOW = 30  # 30-day rolling volatility
 
 # Equities Configuration
-EQUITY_INDICES = {
+MARKET_SUMMARY_TICKERS = {
     "SPY": "S&P 500",
     "QQQ": "Nasdaq 100",
     "IWM": "Russell 2000",
     "^VIX": "Volatility Index",
+    "MBB": "iShares MBS ETF",
+    "^N225": "Nikkei 225",
+    # Interest Rate Tickers (must end in space " ") for regex matching in market summary rendering
+    "^IRX": "13W T-Bill ",
+    "^FVX": "5Y Treasury ",
+    "^TNX": "10Y Treasury ",
+    "^TYX": "30Y Treasury "
 }
 
 SECTOR_ETFS = {
@@ -32,13 +39,14 @@ SECTOR_ETFS = {
     "XLU": "Utilities",
     "XLRE": "Real Estate",
     "XLC": "Communication Services",
+    "XLB": "Materials",
 }
 
 # Mortgage Rates (FRED Series IDs)
 MORTGAGE_RATES = {
-    "MORTGAGE30US": "30Y Fixed Mortgage",
-    "MORTGAGE15US": "15Y Fixed Mortgage",
-    "MORTGAGE5US": "5/1 ARM",
+    "OBMMIC30YF": "30Y Fixed Mortgage",
+    "OBMMIC15YF": "15Y Fixed Mortgage",
+    "OBMMIJUMBO30YF": "30Y Jumbo Mortgage",
 }
 
 # Commodities (Yahoo Finance Tickers)

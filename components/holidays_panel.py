@@ -71,7 +71,7 @@ def render_holidays_panel():
 
         st.dataframe(
             styled_df,
-            use_container_width=True,
+            width='stretch',
             hide_index=True,
             column_config={
                 'Date': st.column_config.TextColumn(width='small'),

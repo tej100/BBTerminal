@@ -6,7 +6,7 @@ import pandas as pd
 import streamlit as st
 from typing import Dict, List
 from .fetcher import DataFetcher
-from config.settings import EQUITY_INDICES, SECTOR_ETFS
+from config.settings import MARKET_SUMMARY_TICKERS, SECTOR_ETFS
 
 
 # Streamlit-cached functions for API calls - persist across page reruns
@@ -48,7 +48,7 @@ class EquitiesFetcher(DataFetcher):
 
     def __init__(self, cache_duration: int = 300):
         super().__init__(cache_duration)
-        self.indices = EQUITY_INDICES
+        self.indices = MARKET_SUMMARY_TICKERS
         self.sectors = SECTOR_ETFS
 
     def get_all_tickers(self) -> List[str]:

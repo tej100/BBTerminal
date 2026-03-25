@@ -28,8 +28,6 @@ def render_equities_panel():
 
 def _render_sector_heatmap(equities: EquitiesFetcher):
     """Render sector performance as a compact table"""
-    st.markdown("#### Sector Performance")
-
     try:
         sector_data = equities.get_sector_performance()
 
@@ -55,7 +53,7 @@ def _render_sector_heatmap(equities: EquitiesFetcher):
         # Display compact dataframe with narrow columns
         st.dataframe(
             styled_df,
-            use_container_width=True,
+            width='stretch',
             hide_index=True,
             column_config={
                 'Sector': st.column_config.TextColumn(width='small'),
@@ -85,8 +83,6 @@ def _color_change_columns(series):
 
 def _render_corporate_actions(corp_actions: CorporateActionsFetcher):
     """Render corporate actions calendar"""
-    st.markdown("#### Corporate Actions")
-
     # Filter by action type
     action_types = ['All', 'Stock Split', 'Delisted', 'Listed', 'Acquisition', 'Spinoff', 'Bankruptcy', 'Symbol Change']
     selected_type = st.selectbox("Filter", action_types, label_visibility="collapsed")
@@ -130,7 +126,7 @@ def _render_corporate_actions(corp_actions: CorporateActionsFetcher):
 
         st.dataframe(
             styled_df,
-            use_container_width=True,
+            width='stretch',
             hide_index=True,
             column_config={
                 'Date': st.column_config.TextColumn(width='small'),
