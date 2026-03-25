@@ -6,6 +6,7 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 from data.treasury import TreasuryFetcher
+from styles.theme import color_rate_changes
 
 
 def render_rates_panel():
@@ -98,22 +99,6 @@ def _render_all_rates(treasury: TreasuryFetcher):
             return
 
         # Style dataframe with conditional coloring (inverse: lower yields = green)
-        def _color_change_columns(series):
-            colors = []
-            for val in series:
-                if val == '-' or pd.isna(val):
-                    colors.append('color: #8b949e')  # Gray for N/A
-                else:
-                    try:
-                        num = float(val.replace('+', ''))
-                        if num > 0:
-                            colors.append('color: #f85149')  # Red for higher yields
-                        else:
-                            colors.append('color: #3fb950')  # Green for lower yields
-                    except (ValueError, AttributeError):
-                        colors.append('color: #8b949e')
-            return colors
-
         # Format values
         df = rates_data.copy()
         df['Yield'] = df['Yield'].apply(lambda x: f"{x:.2f}%" if pd.notna(x) else "-")
@@ -124,7 +109,7 @@ def _render_all_rates(treasury: TreasuryFetcher):
         # Drop old columns
         df = df[['Maturity', 'Yield', 'Daily (bps)', 'Weekly (bps)', 'Monthly (bps)']]
 
-        styled_df = df.style.apply(_color_change_columns, subset=['Daily (bps)', 'Weekly (bps)', 'Monthly (bps)'])
+        styled_df = df.style.apply(color_rate_changes, subset=['Daily (bps)', 'Weekly (bps)', 'Monthly (bps)'])
 
         st.dataframe(
             styled_df,

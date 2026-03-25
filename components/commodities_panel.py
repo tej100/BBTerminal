@@ -5,15 +5,16 @@ Commodity prices and performance - Compact version
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-from data.commodities import CommoditiesFetcher
+from data.yfinance_fetcher import YahooFinanceFetcher
 from config.settings import COMMODITIES
+from styles.theme import color_price_changes
 
 
 def render_commodities_panel():
     """Render the commodities panel"""
     st.markdown("### Commodities")
 
-    commodities = CommoditiesFetcher()
+    commodities = YahooFinanceFetcher(tickers_config=COMMODITIES)
 
     # Tabs for different views
     tab1, tab2 = st.tabs(["Overview", "Chart"])
@@ -25,20 +26,7 @@ def render_commodities_panel():
         _render_commodities_chart(commodities)
 
 
-def _color_change_columns(series):
-    """Apply green/red color to change columns based on positive/negative values"""
-    colors = []
-    for val in series:
-        if val == '-' or pd.isna(val):
-            colors.append('color: #8b949e')  # Gray for N/A
-        elif str(val).startswith('+') or (str(val).startswith('-') is False and float(val.replace('%', '')) > 0):
-            colors.append('color: #3fb950')  # Green for positive
-        else:
-            colors.append('color: #f85149')  # Red for negative
-    return colors
-
-
-def _render_commodities_overview(commodities: CommoditiesFetcher):
+def _render_commodities_overview(commodities: YahooFinanceFetcher):
     """Render commodities overview grid"""
     try:
         prices_data = commodities.get_current_prices()
@@ -60,7 +48,7 @@ def _render_commodities_overview(commodities: CommoditiesFetcher):
         df['Monthly'] = df['Monthly'].apply(lambda x: f"{x:+.2f}%" if pd.notna(x) else "-")
 
         # Style dataframe with conditional coloring
-        styled_df = df.style.apply(_color_change_columns, subset=['Daily', 'Weekly', 'Monthly'])
+        styled_df = df.style.apply(color_price_changes, subset=['Daily', 'Weekly', 'Monthly'])
 
         # Display compact dataframe with narrow columns
         st.dataframe(
@@ -80,7 +68,7 @@ def _render_commodities_overview(commodities: CommoditiesFetcher):
         st.error(f"Error loading commodity data: {str(e)}")
 
 
-def _render_commodities_chart(commodities: CommoditiesFetcher):
+def _render_commodities_chart(commodities: YahooFinanceFetcher):
     """Render commodity chart selector"""
     # Select commodity - use config dict (inverted: name -> ticker)
     commodity_options = {name: ticker for ticker, name in COMMODITIES.items()}

@@ -1,17 +1,16 @@
 """
-Equities data fetcher using yfinance
+Generic Yahoo Finance data fetcher
 """
 import yfinance as yf
 import pandas as pd
 import streamlit as st
-from typing import Dict, List
+from typing import Dict, List, Optional
 from .fetcher import DataFetcher
-from config.settings import MARKET_SUMMARY_TICKERS, SECTOR_ETFS
 
 
 # Streamlit-cached functions for API calls - persist across page reruns
 @st.cache_data(ttl=300)
-def _fetch_prices_data(tickers: tuple) -> pd.DataFrame:
+def _fetch_yfinance_data(tickers: tuple) -> pd.DataFrame:
     """
     Fetch price data from yfinance.
     Cached by Streamlit to prevent repeated API calls on widget interactions.
@@ -31,52 +30,55 @@ def _fetch_prices_data(tickers: tuple) -> pd.DataFrame:
 
 
 @st.cache_data(ttl=300)
-def _fetch_historical(ticker: str, period: str) -> pd.DataFrame:
+def _fetch_yfinance_historical(ticker: str, period: str) -> pd.DataFrame:
     """
     Fetch historical data for a single ticker.
     Cached by Streamlit.
     """
     try:
-        stock = yf.Ticker(ticker)
-        return stock.history(period=period, auto_adjust=True)
+        asset = yf.Ticker(ticker)
+        return asset.history(period=period, auto_adjust=True)
     except Exception:
         return pd.DataFrame()
 
 
-class EquitiesFetcher(DataFetcher):
-    """Fetch equity market data from Yahoo Finance"""
+class YahooFinanceFetcher(DataFetcher):
+    """
+    Generic fetcher for Yahoo Finance data (equities, commodities, etc.)
 
-    def __init__(self, cache_duration: int = 300):
+    Args:
+        tickers_config: Dictionary mapping ticker symbols to display names
+        cache_duration: Cache duration in seconds (default 5 minutes)
+    """
+
+    def __init__(self, tickers_config: Dict[str, str], cache_duration: int = 300):
         super().__init__(cache_duration)
-        self.indices = MARKET_SUMMARY_TICKERS
-        self.sectors = SECTOR_ETFS
+        self.tickers_config = tickers_config
+        self.tickers = list(tickers_config.keys())
 
-    def get_all_tickers(self) -> List[str]:
-        """Get all equity tickers"""
-        return list(self.indices.keys()) + list(self.sectors.keys())
-
-    def get_current_prices(self, tickers: List[str]) -> pd.DataFrame:
+    def get_current_prices(self) -> pd.DataFrame:
         """
         Get current prices with daily, weekly, monthly changes for given tickers
 
         Args:
-            tickers: List of ticker symbols
+            tickers: List of ticker symbols (default: all configured tickers)
 
         Returns:
             DataFrame with price, change_pct (daily), weekly_pct, monthly_pct columns
         """
+
         try:
             # Use Streamlit-cached function for API call
-            data = _fetch_prices_data(tuple(sorted(tickers)))
+            data = _fetch_yfinance_data(tuple(sorted(self.tickers)))
 
             if data.empty:
                 return pd.DataFrame()
 
             results = []
-            for ticker in tickers:
+            for ticker in self.tickers:
                 try:
                     # Handle MultiIndex columns from yfinance
-                    if len(tickers) == 1:
+                    if len(self.tickers) == 1:
                         close_prices = data.xs('Close', level='Price', axis=1).iloc[:, 0]
                     else:
                         close_prices = data[ticker]['Close']
@@ -111,7 +113,7 @@ class EquitiesFetcher(DataFetcher):
 
                     results.append({
                         'ticker': ticker,
-                        'name': self._get_name(ticker),
+                        'name': self.tickers_config.get(ticker, ticker),
                         'price': round(last_close, 2),
                         'change': round(last_close - prev_close, 2),
                         'change_pct': round(daily_pct, 2),
@@ -137,55 +139,12 @@ class EquitiesFetcher(DataFetcher):
         Returns:
             DataFrame with OHLCV data
         """
-        return _fetch_historical(ticker, period)
-
-    def get_corporate_actions(self, ticker: str, days: int = 30) -> pd.DataFrame:
-        """
-        Get recent corporate actions (dividends, splits)
-
-        Args:
-            ticker: Ticker symbol
-            days: Number of days to look back
-
-        Returns:
-            DataFrame with corporate actions
-        """
-        try:
-            stock = yf.Ticker(ticker)
-            actions = stock.actions
-
-            if actions is not None and len(actions) > 0:
-                # Filter to recent days
-                cutoff = pd.Timestamp.now() - pd.Timedelta(days=days)
-                recent = actions[actions.index >= cutoff]
-                return recent
-
-            return pd.DataFrame()
-        except Exception:
-            return pd.DataFrame()
+        return _fetch_yfinance_historical(ticker, period)
 
     def get_info(self, ticker: str) -> Dict:
-        """Get basic company info"""
+        """Get basic asset info"""
         try:
-            stock = yf.Ticker(ticker)
-            return stock.info
+            asset = yf.Ticker(ticker)
+            return asset.info
         except Exception:
             return {}
-
-    def _get_name(self, ticker: str) -> str:
-        """Get display name for ticker"""
-        if ticker in self.indices:
-            return self.indices[ticker]
-        if ticker in self.sectors:
-            return self.sectors[ticker]
-        return ticker
-
-    def get_sector_performance(self) -> pd.DataFrame:
-        """Get performance data for all sector ETFs"""
-        tickers = list(self.sectors.keys())
-        return self.get_current_prices(tickers)
-
-    def get_indices_performance(self) -> pd.DataFrame:
-        """Get performance data for major indices"""
-        tickers = list(self.indices.keys())
-        return self.get_current_prices(tickers)

@@ -87,25 +87,28 @@ class CommoditiesFetcher(DataFetcher):
                         continue
 
                     last_close = close_prices.iloc[-1]
+                    latest_date = close_prices.index[-1]
 
-                    # Daily change (vs previous close)
-                    prev_close = close_prices.iloc[-2]
-                    daily_pct = ((last_close - prev_close) / prev_close) * 100
+                    # Daily change (vs previous available data point)
+                    daily_pct = 0
+                    if len(close_prices) >= 2:
+                        prev_close = close_prices.iloc[-2]
+                        daily_pct = ((last_close - prev_close) / prev_close) * 100
 
-                    # Weekly change (vs 5 trading days ago)
-                    if len(close_prices) >= 5:
-                        week_ago = close_prices.iloc[-5]
+                    # Weekly change: value as of ~7 days before latest, using latest available before that date
+                    weekly_pct = None
+                    weekly_target_date = latest_date - pd.DateOffset(weeks=1)
+                    weekly_candidates = close_prices[close_prices.index <= weekly_target_date]
+                    if not weekly_candidates.empty:
+                        week_ago = weekly_candidates.iloc[-1]
                         weekly_pct = ((last_close - week_ago) / week_ago) * 100
-                    else:
-                        weekly_pct = None
 
-                    # Monthly change (vs 20 trading days ago or earliest available)
-                    if len(close_prices) >= 20:
-                        month_ago = close_prices.iloc[-20]
-                        monthly_pct = ((last_close - month_ago) / month_ago) * 100
-                    else:
-                        # Use earliest available
-                        month_ago = close_prices.iloc[0]
+                    # Monthly change: value as of ~1 month before latest, using latest available before that date
+                    monthly_pct = None
+                    monthly_target_date = latest_date - pd.DateOffset(months=1)
+                    monthly_candidates = close_prices[close_prices.index <= monthly_target_date]
+                    if not monthly_candidates.empty:
+                        month_ago = monthly_candidates.iloc[-1]
                         monthly_pct = ((last_close - month_ago) / month_ago) * 100
 
                     results.append({

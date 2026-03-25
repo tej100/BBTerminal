@@ -4,16 +4,17 @@ Sector heatmap and corporate actions
 """
 import streamlit as st
 import pandas as pd
-from data.equities import EquitiesFetcher
+from data.yfinance_fetcher import YahooFinanceFetcher
 from data.corporate_actions import CorporateActionsFetcher
 from config.settings import SECTOR_ETFS
+from styles.theme import color_price_changes
 
 
 def render_equities_panel():
     """Render the equities panel with sector performance"""
     st.markdown("### Equities")
 
-    equities = EquitiesFetcher()
+    equities = YahooFinanceFetcher(tickers_config=SECTOR_ETFS)
     corp_actions = CorporateActionsFetcher()
 
     # Tabs for different views
@@ -26,10 +27,10 @@ def render_equities_panel():
         _render_corporate_actions(corp_actions)
 
 
-def _render_sector_heatmap(equities: EquitiesFetcher):
+def _render_sector_heatmap(equities: YahooFinanceFetcher):
     """Render sector performance as a compact table"""
     try:
-        sector_data = equities.get_sector_performance()
+        sector_data = equities.get_current_prices()
 
         if sector_data.empty:
             st.info("Sector data not available")
@@ -48,7 +49,7 @@ def _render_sector_heatmap(equities: EquitiesFetcher):
         df['Monthly'] = df['Monthly'].apply(lambda x: f"{x:+.2f}%" if pd.notna(x) else "-")
 
         # Style dataframe with conditional coloring
-        styled_df = df.style.apply(_color_change_columns, subset=['Daily', 'Weekly', 'Monthly'])
+        styled_df = df.style.apply(color_price_changes, subset=['Daily', 'Weekly', 'Monthly'])
 
         # Display compact dataframe with narrow columns
         st.dataframe(
@@ -66,19 +67,6 @@ def _render_sector_heatmap(equities: EquitiesFetcher):
 
     except Exception as e:
         st.error(f"Error loading sector data: {str(e)}")
-
-
-def _color_change_columns(series):
-    """Apply green/red color to change columns based on positive/negative values"""
-    colors = []
-    for val in series:
-        if val == '-' or pd.isna(val):
-            colors.append('color: #8b949e')  # Gray for N/A
-        elif str(val).startswith('+') or (str(val).startswith('-') is False and float(val.replace('%', '')) > 0):
-            colors.append('color: #3fb950')  # Green for positive
-        else:
-            colors.append('color: #f85149')  # Red for negative
-    return colors
 
 
 def _render_corporate_actions(corp_actions: CorporateActionsFetcher):

@@ -9,19 +9,27 @@
 
 ### Data Architecture Refactoring
 - **Generic FredFetcher**: Created unified `FredFetcher` class for all FRED API data (mortgages, economics, treasury)
-- **Removed Specialized Fetchers**: Eliminated `MortgagesFetcher` and `EconomicFetcher` dependencies - now use `FredFetcher` with config-driven series IDs
-- **Date-Based Calculations**: Updated `FredFetcher` to calculate weekly/monthly changes based on actual calendar dates rather than record count (uses `timedelta` for days, `DateOffset` for months)
+- **Generic YahooFinanceFetcher**: Consolidated `EquitiesFetcher` and `CommoditiesFetcher` into unified `YahooFinanceFetcher` with specialized subclasses
+- **Removed Specialized Fetchers**: Eliminated separate `equities.py` and `commodities.py` files - now use `YahooFinanceFetcher` with config-driven ticker sets
+- **Date-Based Calculations**: Updated `FredFetcher`, `TreasuryFetcher`, `YahooFinanceFetcher` (equities/commodities) to calculate weekly/monthly changes based on actual calendar dates rather than record count (uses `timedelta` for days, `DateOffset` for weeks/months)
 
 ### Styling & Performance
 - **Chart Updates**: Replaced deprecated `use_container_width=True` with `width='stretch'` across all Plotly charts
 - **Table Enhancements**: 
   - Treasury yields table: Added bps (basis points) display style
   - Mortgage rates table: Added weekly/monthly bps change columns with dynamic dropdown selection
+- **Centralized Styling**: Moved conditional coloring functions (`color_rate_changes`, `color_price_changes`) to `styles/theme.py` for reusability across components
 - **Compact Design**: Streamlined component layouts for better space utilization
 
 ### Configuration
 - **Enhanced Settings**: Expanded `MORTGAGE_RATES` and `ECONOMIC_DATA` dictionaries in `config/settings.py` for full config-driven operation
 - **Unified Patterns**: All FRED-based data now follows consistent fetcher pattern
+
+### Code Quality Improvements
+- **Import Organization**: Moved all import statements to the top of files following Python best practices
+- **Centralized Styling**: Moved conditional coloring functions (`color_rate_changes`, `color_price_changes`) to `styles/theme.py` for reusability across components
+- **DRY Principle**: Eliminated code duplication by centralizing common styling logic
+- **Code Condensation**: Simplified `TreasuryFetcher.get_latest_yields()` logic by removing redundant calculations and using helper functions
 
 ## Project Overview
 
@@ -108,8 +116,9 @@ Get free key at https://fred.stlouisfed.org/docs/api/api_key.html
 |------|---------|
 | `app.py` | Main Streamlit app, renders all panels |
 | `config/settings.py` | All configuration constants |
-| `styles/theme.py` | Centralized CSS theme |
+| `styles/theme.py` | Centralized CSS theme + conditional coloring functions (`color_rate_changes`, `color_price_changes`) |
 | `data/fetcher.py` | Base DataFetcher class with caching |
+| `data/yfinance_fetcher.py` | Generic Yahoo Finance fetcher for equities and commodities |
 | `data/fred_fetcher.py` | Unified FRED API fetcher for mortgages, economics, treasury |
 | `data/treasury.py` | Treasury yield curve data |
 | `data/corporate_actions.py` | Corporate actions calendar |

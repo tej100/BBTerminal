@@ -8,6 +8,7 @@ import plotly.graph_objects as go
 from data.fred_fetcher import FredFetcher
 from data.treasury import TreasuryFetcher
 from config.settings import MORTGAGE_RATES
+from styles.theme import color_rate_changes
 
 
 def render_mortgages_panel():
@@ -36,22 +37,6 @@ def _render_current_rates(mortgages: FredFetcher):
             return
 
         # Style dataframe with conditional coloring
-        def _color_change_columns(series):
-            colors = []
-            for val in series:
-                if val == '-' or pd.isna(val):
-                    colors.append('color: #8b949e')  # Gray for N/A
-                else:
-                    try:
-                        num = float(val.replace('+', ''))
-                        if num > 0:
-                            colors.append('color: #f85149')  # Red for higher
-                        else:
-                            colors.append('color: #3fb950')  # Green for lower
-                    except (ValueError, AttributeError):
-                        colors.append('color: #8b949e')
-            return colors
-
         # Format dataframe
         df = rates_data.copy()
         df['Type'] = df['name'].str.replace(' Mortgage', '').str.replace(' Fixed', '')
@@ -63,7 +48,7 @@ def _render_current_rates(mortgages: FredFetcher):
         # Select and reorder columns
         df = df[['Type', 'Rate', 'Daily (bps)', 'Weekly (bps)', 'Monthly (bps)']]
 
-        styled_df = df.style.apply(_color_change_columns, subset=['Daily (bps)', 'Weekly (bps)', 'Monthly (bps)'])
+        styled_df = df.style.apply(color_rate_changes, subset=['Daily (bps)', 'Weekly (bps)', 'Monthly (bps)'])
 
         st.dataframe(
             styled_df,

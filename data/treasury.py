@@ -4,7 +4,7 @@ Treasury Yield Curve data fetcher using fiscaldata.treasury.gov API
 import pandas as pd
 import requests
 import streamlit as st
-from typing import Optional
+import xml.etree.ElementTree as ET
 from datetime import datetime
 from .fetcher import DataFetcher
 
@@ -45,15 +45,13 @@ class TreasuryFetcher(DataFetcher):
     }
 
     # Ordered list for display
-    MATURITY_ORDER = ['1M', '2M', '3M', '4M', '6M', '1Y', '2Y', '3Y', '5Y', '7Y', '10Y', '20Y', '30Y']
+    MATURITY_ORDER = list(MATURITIES.values())
 
     def __init__(self, cache_duration: int = 300):
         super().__init__(cache_duration)
 
     def _parse_xml_yields(self, xml_content: str) -> pd.DataFrame:
         """Parse XML yield curve data into DataFrame"""
-        import xml.etree.ElementTree as ET
-
         try:
             root = ET.fromstring(xml_content)
         except ET.ParseError:
@@ -141,41 +139,42 @@ class TreasuryFetcher(DataFetcher):
             # Get enough history for monthly change (approx 35 days to be safe)
             df = self.get_yield_curve_data(days=35)
 
-            if df.empty or len(df) < 1:
+            if df.empty or len(df) < 2:
                 return pd.DataFrame()
 
             latest = df.iloc[0]
-            previous_day = df.iloc[1] if len(df) > 1 else None
-            # Weekly: ~5 trading days back
-            previous_week = df.iloc[5] if len(df) > 5 else None
-            # Monthly: ~21 trading days back
-            previous_month = df.iloc[21] if len(df) > 21 else None
+            latest_date = df['date'].iloc[0]
+
+            # Helper function to get value from target date
+            def get_value_at_date(target_date):
+                candidates = df[df['date'] <= target_date]
+                return candidates.iloc[0] if not candidates.empty else None
 
             results = []
             for col, maturity in self.MATURITIES.items():
-                if col in latest.index and pd.notna(latest[col]):
-                    rate = latest[col]
+                if col not in latest.index or pd.isna(latest[col]):
+                    continue
 
-                    daily_change = None
-                    weekly_change = None
-                    monthly_change = None
+                rate = latest[col]
 
-                    if previous_day is not None and col in previous_day.index and pd.notna(previous_day[col]):
-                        daily_change = round(latest[col] - previous_day[col], 3)
+                # Daily change: previous available data point
+                daily = round(rate - df.iloc[1][col], 3) if pd.notna(df.iloc[1][col]) else None
 
-                    if previous_week is not None and col in previous_week.index and pd.notna(previous_week[col]):
-                        weekly_change = round(latest[col] - previous_week[col], 3)
+                # Weekly change: value ~7 days before latest
+                weekly_value = get_value_at_date(latest_date - pd.DateOffset(weeks=1))
+                weekly = round(rate - weekly_value[col], 3) if weekly_value is not None and pd.notna(weekly_value[col]) else None
 
-                    if previous_month is not None and col in previous_month.index and pd.notna(previous_month[col]):
-                        monthly_change = round(latest[col] - previous_month[col], 3)
+                # Monthly change: value ~1 month before latest
+                monthly_value = get_value_at_date(latest_date - pd.DateOffset(months=1))
+                monthly = round(rate - monthly_value[col], 3) if monthly_value is not None and pd.notna(monthly_value[col]) else None
 
-                    results.append({
-                        'maturity': maturity,
-                        'rate': round(rate, 3),
-                        'daily': daily_change,
-                        'weekly': weekly_change,
-                        'monthly': monthly_change
-                    })
+                results.append({
+                    'maturity': maturity,
+                    'rate': round(rate, 3),
+                    'daily': daily,
+                    'weekly': weekly,
+                    'monthly': monthly
+                })
 
             result_df = pd.DataFrame(results)
             # Sort by maturity order

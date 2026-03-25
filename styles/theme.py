@@ -3,6 +3,10 @@ BBTerminal Theme Module
 Centralized Bloomberg-style CSS for professional dashboard appearance
 """
 
+import pandas as pd
+from datetime import datetime
+import streamlit as st
+
 # Base CSS applied to all pages
 BASE_CSS = """
 <style>
@@ -396,9 +400,39 @@ HEADER_CSS = """
 """
 
 
+def color_rate_changes(series):
+    """Apply green/red color to rate/yield change columns (higher rates = red, lower = green)"""
+    colors = []
+    for val in series:
+        if val == '-' or pd.isna(val):
+            colors.append('color: #8b949e')  # Gray for N/A
+        else:
+            try:
+                num = float(str(val).replace('+', ''))
+                if num > 0:
+                    colors.append('color: #f85149')  # Red for higher rates (bad for borrowers/investors)
+                else:
+                    colors.append('color: #3fb950')  # Green for lower rates (good for borrowers/investors)
+            except (ValueError, AttributeError):
+                colors.append('color: #8b949e')  # Gray for invalid values
+    return colors
+
+
+def color_price_changes(series):
+    """Apply green/red color to price/equity change columns (positive = green, negative = red)"""
+    colors = []
+    for val in series:
+        if val == '-' or pd.isna(val):
+            colors.append('color: #8b949e')  # Gray for N/A
+        elif str(val).startswith('+') or (not str(val).startswith('-') and float(str(val).replace('%', '')) > 0):
+            colors.append('color: #3fb950')  # Green for positive changes (gains/up)
+        else:
+            colors.append('color: #f85149')  # Red for negative changes (losses/down)
+    return colors
+
+
 def apply_theme():
     """Apply all theme CSS to the Streamlit app."""
-    import streamlit as st
     st.markdown(BASE_CSS, unsafe_allow_html=True)
     st.markdown(COMPACT_CARD_CSS, unsafe_allow_html=True)
     st.markdown(HEADER_CSS, unsafe_allow_html=True)
@@ -406,9 +440,6 @@ def apply_theme():
 
 def render_header():
     """Render the compact dashboard header."""
-    from datetime import datetime
-    import streamlit as st
-
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     st.markdown(f"""

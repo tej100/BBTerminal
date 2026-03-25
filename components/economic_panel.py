@@ -21,7 +21,6 @@ def _calculate_yoy_mom(series_id: str, fred_fetcher: FredFetcher) -> dict:
         Dict with name, value, yoy_change, mom_change
     """
     try:
-        from fredapi import Fred
         fred = fred_fetcher.fred
         series = fred.get_series(series_id)
         

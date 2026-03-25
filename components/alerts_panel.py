@@ -6,6 +6,7 @@ import streamlit as st
 import pandas as pd
 from data.equities import EquitiesFetcher
 from data.commodities import CommoditiesFetcher
+from data.calendars import CalendarFetcher
 from utils.dq_checks import DQChecker, OutlierType
 
 
@@ -123,8 +124,6 @@ def _render_outlier_alerts(alerts: list):
 
 def render_market_status():
     """Render market status indicator in sidebar"""
-    from data.calendars import CalendarFetcher
-
     calendars = CalendarFetcher()
     st.markdown("### Market Status")
 
