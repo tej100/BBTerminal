@@ -55,9 +55,10 @@ def _render_sector_heatmap(equities: YahooFinanceFetcher):
         st.dataframe(
             styled_df,
             width='stretch',
+            height=min(13 * 32 + 8, 500),
             hide_index=True,
             column_config={
-                'Sector': st.column_config.TextColumn(width='small'),
+                'Sector': st.column_config.TextColumn(width='medium'),
                 'Price': st.column_config.TextColumn(width='small'),
                 'Daily': st.column_config.TextColumn(width='small'),
                 'Weekly': st.column_config.TextColumn(width='small'),
@@ -123,8 +124,6 @@ def _render_corporate_actions(corp_actions: CorporateActionsFetcher):
                 'Action': st.column_config.TextColumn(width='large')
             }
         )
-
-        st.caption("*Data from stockanalysis.com • May explain price gaps/spikes in DQ checks*")
 
     except Exception as e:
         st.error(f"Error loading corporate actions: {str(e)}")

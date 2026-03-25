@@ -4,10 +4,11 @@ DQ alerts and outlier detection - Compact version
 """
 import streamlit as st
 import pandas as pd
-from data.equities import EquitiesFetcher
-from data.commodities import CommoditiesFetcher
+from data.yfinance_fetcher import YahooFinanceFetcher
 from data.calendars import CalendarFetcher
 from utils.dq_checks import DQChecker, OutlierType
+from config.settings import MARKET_SUMMARY_TICKERS, SECTOR_ETFS, COMMODITIES
+from typing import Dict, List
 
 
 def render_alerts_panel():
@@ -32,45 +33,34 @@ def render_alerts_panel():
 
 def _collect_all_alerts(dq_checker: DQChecker) -> list:
     """Collect all DQ alerts from various data sources"""
-    all_alerts = []
+    # Combine all ticker configurations into one comprehensive set
+    all_tickers = {**MARKET_SUMMARY_TICKERS, **SECTOR_ETFS, **COMMODITIES}
 
-    # Check equities
+    return _check_ticker_category(dq_checker, "All Tickers", all_tickers)
+
+
+def _check_ticker_category(dq_checker: DQChecker, category_name: str, ticker_config: Dict[str, str]) -> list:
+    """Check a specific ticker category for DQ alerts"""
+    alerts = []
+
     try:
-        equities = EquitiesFetcher()
-        indices_data = equities.get_indices_performance()
-
-        for _, row in indices_data.iterrows():
-            ticker = row['ticker']
-            hist = equities.get_historical(ticker, period="1mo")
-
-            if not hist.empty and 'Close' in hist.columns:
-                series = hist['Close']
-                series.name = ticker
-                alerts = dq_checker.check_outliers(series, f"{ticker} ({row.get('name', ticker)})")
-                all_alerts.extend(alerts)
-
-    except Exception:
-        pass
-
-    # Check commodities
-    try:
-        commodities = CommoditiesFetcher()
-        prices_data = commodities.get_current_prices()
+        fetcher = YahooFinanceFetcher(ticker_config)
+        prices_data = fetcher.get_current_prices()
 
         for _, row in prices_data.iterrows():
             ticker = row['ticker']
-            hist = commodities.get_historical(ticker, period="1mo")
+            hist = fetcher.get_historical(ticker, period="1mo")
 
             if not hist.empty and 'Close' in hist.columns:
                 series = hist['Close']
                 series.name = ticker
-                alerts = dq_checker.check_outliers(series, f"{ticker} ({row.get('name', ticker)})")
-                all_alerts.extend(alerts)
+                ticker_alerts = dq_checker.check_outliers(series, f"{ticker} ({row.get('name', ticker)})")
+                alerts.extend(ticker_alerts)
 
     except Exception:
         pass
 
-    return all_alerts
+    return alerts
 
 
 def _render_all_alerts(alerts: list):
@@ -145,7 +135,7 @@ def render_market_status():
         if not todays_holidays.empty:
             st.markdown("**Today's Holidays:**")
             for _, row in todays_holidays.iterrows():
-                st.caption(f"{row['region']}: {row['holiday']}")
+                st.markdown(f"{row['region']}: {row['holiday']}")
 
     except Exception:
         pass

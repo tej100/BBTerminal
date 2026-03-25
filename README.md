@@ -65,11 +65,9 @@ BBTerminal/
 │   └── settings.py             # Tickers, series IDs, thresholds
 ├── data/
 │   ├── fetcher.py              # Base data fetcher with time-based caching
-│   ├── equities.py             # Equity data (yfinance)
-│   ├── treasury.py             # Treasury yield curve (Treasury.gov API)
-│   ├── mortgages.py            # Mortgage rate data (FRED)
-│   ├── commodities.py          # Commodity futures (yfinance)
-│   ├── economic.py             # Economic indicators (FRED)
+│   ├── yfinance_fetcher.py     # Generic Yahoo Finance fetcher for equities & commodities
+│   ├── fred_fetcher.py         # Unified FRED API fetcher for mortgages, economics, treasury
+│   ├── treasury.py             # Treasury yields from FRED
 │   ├── corporate_actions.py    # Corporate actions (stockanalysis.com)
 │   └── calendars.py            # Holiday calendars
 ├── components/

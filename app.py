@@ -36,8 +36,8 @@ def main():
     # Compact header
     render_header()
 
-    # Main layout: Equities on left (1/3), Indices on right (2/3)
-    col_left, col_right = st.columns([1, 2])
+    # Main layout: Equities on left (1/4), Indices on right (3/4)
+    col_left, col_right = st.columns([1, 3])
 
     with col_left:
         # Left column: Equities

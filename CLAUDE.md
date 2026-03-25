@@ -1,5 +1,18 @@
 # CLAUDE.md
 
+## Development Guidelines
+
+### Git Commits
+- **Do NOT include Claude as co-author** in commits - all commits are authored by the human developer only
+- Use clear, descriptive commit messages following conventional commits format (`refactor:`, `feat:`, `fix:`, etc.)
+
+### Code Standards
+- **PEP8 Compliance**: All Python code must follow [PEP8](https://www.python.org/dev/peps/pep-0008/) style guidelines
+  - 4-space indentation (not tabs)
+  - Max line length: 100 characters (soft), 120 characters (hard limit)
+  - Use snake_case for functions/variables, PascalCase for classes
+  - Two blank lines between top-level definitions; one between methods
+
 ## Recent Updates (March 2026)
 
 ### UI Layout Improvements
@@ -9,17 +22,20 @@
 
 ### Data Architecture Refactoring
 - **Generic FredFetcher**: Created unified `FredFetcher` class for all FRED API data (mortgages, economics, treasury)
-- **Generic YahooFinanceFetcher**: Consolidated `EquitiesFetcher` and `CommoditiesFetcher` into unified `YahooFinanceFetcher` with specialized subclasses
-- **Removed Specialized Fetchers**: Eliminated separate `equities.py` and `commodities.py` files - now use `YahooFinanceFetcher` with config-driven ticker sets
+- **Generic YahooFinanceFetcher**: Consolidated all Yahoo Finance data fetching into single `YahooFinanceFetcher` class in `yfinance_fetcher.py` - accepts any ticker config dictionary
+- **Removed Specialized Fetchers**: Deleted `equities.py`, `commodities.py`, and `__init__.py` files across all packages for minimal codebase clutter
 - **Date-Based Calculations**: Updated `FredFetcher`, `TreasuryFetcher`, `YahooFinanceFetcher` (equities/commodities) to calculate weekly/monthly changes based on actual calendar dates rather than record count (uses `timedelta` for days, `DateOffset` for weeks/months)
+- **Enhanced DQ Monitoring**: Updated alerts panel to monitor all ticker categories (market summary, sector ETFs, commodities) for comprehensive data quality checks
 
 ### Styling & Performance
 - **Chart Updates**: Replaced deprecated `use_container_width=True` with `width='stretch'` across all Plotly charts
 - **Table Enhancements**: 
   - Treasury yields table: Added bps (basis points) display style
   - Mortgage rates table: Added weekly/monthly bps change columns with dynamic dropdown selection
+  - Sector table: Fixed height for all 11 rows without scroll; increased Sector column width to 'medium' for better readability
 - **Centralized Styling**: Moved conditional coloring functions (`color_rate_changes`, `color_price_changes`) to `styles/theme.py` for reusability across components
-- **Compact Design**: Streamlined component layouts for better space utilization
+- **Compact Design**: Streamlined component layouts for better space utilization; adjusted main layout to [1, 3] ratio (25% equities, 75% right side) for optimal horizontal distribution
+- **Removed Captions**: Eliminated all `st.caption()` calls throughout components to reduce vertical height and enable single-screen dashboard viewing
 
 ### Configuration
 - **Enhanced Settings**: Expanded `MORTGAGE_RATES` and `ECONOMIC_DATA` dictionaries in `config/settings.py` for full config-driven operation
@@ -30,6 +46,7 @@
 - **Centralized Styling**: Moved conditional coloring functions (`color_rate_changes`, `color_price_changes`) to `styles/theme.py` for reusability across components
 - **DRY Principle**: Eliminated code duplication by centralizing common styling logic
 - **Code Condensation**: Simplified `TreasuryFetcher.get_latest_yields()` logic by removing redundant calculations and using helper functions
+- **DRY Principle**: Eliminated code duplication in alerts panel by creating reusable `_check_ticker_category()` helper function and combining all ticker configurations
 
 ## Project Overview
 
@@ -46,7 +63,7 @@ streamlit run app.py            # Run dashboard at http://localhost:8501
 
 ### Data Layer (`data/`)
 - **Base class**: `DataFetcher` (`fetcher.py`) provides time-based caching (default 5 min)
-- **yfinance-based**: `EquitiesFetcher`, `CommoditiesFetcher` - stock/commodity prices
+- **yfinance-based**: `YahooFinanceFetcher` - generic fetcher for equities, commodities, and indices from Yahoo Finance
 - **FRED-based**: `FredFetcher` - unified fetcher for mortgage rates, economic indicators, and treasury data
 - **Treasury**: `TreasuryFetcher` - treasury yields from FRED (GS10, GS20, etc.)
 - **Corporate actions**: `CorporateActionsFetcher` - stock splits, delistings, acquisitions (from stockanalysis.com)
@@ -118,7 +135,7 @@ Get free key at https://fred.stlouisfed.org/docs/api/api_key.html
 | `config/settings.py` | All configuration constants |
 | `styles/theme.py` | Centralized CSS theme + conditional coloring functions (`color_rate_changes`, `color_price_changes`) |
 | `data/fetcher.py` | Base DataFetcher class with caching |
-| `data/yfinance_fetcher.py` | Generic Yahoo Finance fetcher for equities and commodities |
+| `data/yfinance_fetcher.py` | Generic Yahoo Finance fetcher (accepts any ticker config) |
 | `data/fred_fetcher.py` | Unified FRED API fetcher for mortgages, economics, treasury |
 | `data/treasury.py` | Treasury yield curve data |
 | `data/corporate_actions.py` | Corporate actions calendar |

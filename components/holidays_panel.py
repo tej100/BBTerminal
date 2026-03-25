@@ -82,8 +82,5 @@ def render_holidays_panel():
             }
         )
 
-        # Show count of holidays by region
-        st.caption(f"*Showing {len(display_df)} upcoming holidays • Market closed on highlighted dates*")
-
     except Exception as e:
         st.error(f"Error loading holidays: {str(e)}")

@@ -72,8 +72,6 @@ def _render_yield_curve(treasury: TreasuryFetcher):
                 spread = yields['10Y'] - yields['2Y']
                 color = "normal" if spread >= 0 else "inverse"
                 st.metric("2Y-10Y", f"{spread*100:.0f}bp", delta_color=color)
-                if spread < 0:
-                    st.caption("Inverted")
 
         with col2:
             if '3M' in yields and '10Y' in yields:
@@ -123,8 +121,6 @@ def _render_all_rates(treasury: TreasuryFetcher):
                 'Monthly (bps)': st.column_config.TextColumn(width='small')
             }
         )
-
-        st.caption("*Treasury yields updated daily (end of day)*")
 
     except Exception as e:
         st.error(f"Error loading rate data: {str(e)}")

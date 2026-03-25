@@ -61,7 +61,7 @@ def _render_market_card(name: str, data: dict):
         st.metric(
             name,
             f"{latest:.2f}%",
-            delta=f"{latest-previous:+.2f}",
+            delta=f"{(latest-previous)*100:+.1f}",
             delta_color="inverse"
         )
     else:
