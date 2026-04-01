@@ -15,11 +15,12 @@ def _fetch_yfinance_data(tickers: tuple) -> pd.DataFrame:
     Fetch price data from yfinance.
     Cached by Streamlit to prevent repeated API calls on widget interactions.
     tickers must be a tuple (hashable) for caching.
+    Fetches 45d to ensure enough history for monthly change calculation.
     """
     try:
         data = yf.download(
             list(tickers),
-            period="1mo",
+            period="45d",
             progress=False,
             group_by="ticker",
             auto_adjust=True

@@ -82,3 +82,30 @@ EXCHANGE_CALENDARS = {
     "CN": "XSHG",  # Shanghai
 }
 
+# Treasury Tenors for Correlation Analysis (Treasury.gov column names)
+TREASURY_TENORS = {
+    "BC_1MONTH": "1M",
+    "BC_2MONTH": "2M",
+    "BC_3MONTH": "3M",
+    "BC_4MONTH": "4M",
+    "BC_6MONTH": "6M",
+    "BC_1YEAR": "1Y",
+    "BC_2YEAR": "2Y",
+    "BC_3YEAR": "3Y",
+    "BC_5YEAR": "5Y",
+    "BC_7YEAR": "7Y",
+    "BC_10YEAR": "10Y",
+    "BC_20YEAR": "20Y",
+    "BC_30YEAR": "30Y",
+}
+
+# KRI Ticker Groups (extensible references for Yahoo Finance tickers)
+KRI_TICKER_GROUPS = {
+    "MARKET_SUMMARY_TICKERS": MARKET_SUMMARY_TICKERS,
+    "SECTOR_ETFS": SECTOR_ETFS,
+    "COMMODITIES": COMMODITIES,
+}
+
+# KRI Default Parameters
+KRI_DEFAULT_LOOKBACK = 30
+

@@ -7,6 +7,7 @@ import streamlit as st
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from .fetcher import DataFetcher
+from config.settings import TREASURY_TENORS
 
 
 # Streamlit-cached function for HTTP requests - prevents repeated API calls
@@ -27,25 +28,11 @@ def _fetch_treasury_xml(year: int) -> str:
 class TreasuryFetcher(DataFetcher):
     """Fetch Treasury yield curve data from fiscaldata.treasury.gov"""
 
-    # Maturity columns from Treasury API
-    MATURITIES = {
-        'BC_1MONTH': '1M',
-        'BC_2MONTH': '2M',
-        'BC_3MONTH': '3M',
-        'BC_4MONTH': '4M',
-        'BC_6MONTH': '6M',
-        'BC_1YEAR': '1Y',
-        'BC_2YEAR': '2Y',
-        'BC_3YEAR': '3Y',
-        'BC_5YEAR': '5Y',
-        'BC_7YEAR': '7Y',
-        'BC_10YEAR': '10Y',
-        'BC_20YEAR': '20Y',
-        'BC_30YEAR': '30Y',
-    }
+    # Maturity columns from config: {API_column: display_name}
+    MATURITIES = TREASURY_TENORS
 
-    # Ordered list for display
-    MATURITY_ORDER = list(MATURITIES.values())
+    # Ordered list of display names for sorting (values preserve dict insertion order)
+    MATURITY_ORDER = list(TREASURY_TENORS.values())
 
     def __init__(self, cache_duration: int = 300):
         super().__init__(cache_duration)

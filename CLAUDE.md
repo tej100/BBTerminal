@@ -15,6 +15,21 @@
 
 ## Recent Updates (March 2026)
 
+### Key Risk Indicators (KRI) Framework - Tier 1
+- **Dynamic Severity**: Each KRI has `low_threshold` and optional `high_threshold`
+  - If only `low_threshold` set: triggers low severity (🟡 yellow)
+  - If both set: triggers low at `low_threshold`, high at `high_threshold` (🔴 red)
+- **Minimal Config**: {ticker/tickers, low_threshold, [high_threshold], metric, condition}
+- **Tier 1 KRIs**:
+  - `vix_elevated`: VIX 25-35 (low-high thresholds)
+  - `spy_large_move`: SPY daily % 1.0%-2.0% (low-high thresholds)
+  - `sector_extreme_move`: Sector ETF daily % 3%-5% (low-high thresholds)
+  - `commodity_zscore_alert`: Commodity z-score 2.0-3.0 (low-high thresholds)
+- **Generic Framework**: `KRIChecker.check_all()` auto-discovers and evaluates all KRIs
+- **UI**: "Active" tab shows triggered KRIs (auto-colored), "All KRIs" tab shows framework status
+- **Config Location**: KRIs defined in `config/kri_config.py` (separate from settings)
+- **Ticker Groups**: `KRI_TICKER_GROUPS` in settings.py contains all Yahoo Finance groups (`MARKET_SUMMARY_TICKERS`, `SECTOR_ETFS`, `COMMODITIES`)
+
 ### UI Layout Improvements
 - **Market Summary**: Consolidated all summary cards (indices, commodities, yields) into single horizontal row for compact display
 - **Dynamic Configuration**: Market summary now uses dynamic ticker sets from `config/settings.py` instead of hardcoded values
@@ -84,8 +99,14 @@ Streamlit UI panels with tabs for different views:
 
 ### Configuration (`config/settings.py`)
 - FRED API key from `.env` (`FRED_API_KEY`)
-- Ticker dictionaries: `EQUITY_INDICES`, `SECTOR_ETFS`, `MORTGAGE_RATES`, `COMMODITIES`, `ECONOMIC_DATA`
+- Ticker dictionaries: `MARKET_SUMMARY_TICKERS`, `SECTOR_ETFS`, `MORTGAGE_RATES`, `COMMODITIES`, `ECONOMIC_DATA`
+- `KRI_TICKER_GROUPS`: Groups available for multi-ticker KRIs (all Yahoo Finance tickers)
 - DQ thresholds, refresh intervals, exchange calendars
+
+### KRI Configuration (`config/kri_config.py`)
+- All KRI definitions in separate file for easy management
+- Metrics: `last_price`, `daily_pct_change`, `z_score`, `z_score_abs`
+- Conditions: `>=`, `<=`, `abs`, `abs_le`, `spike`
 
 ### Utilities (`utils/`)
 - `dq_checks.py` - `DQChecker` for outlier/stale data detection
@@ -119,6 +140,43 @@ Standard layout: `Current | 30D High | 30D Low` (not abbreviated)
 2. Create fetcher in `data/` inheriting from `DataFetcher`
 3. Create component in `components/` following existing patterns
 
+### Adding New KRIs
+Each KRI is 100% configurable via `config/kri_config.py`. Example with dual thresholds:
+
+```python
+KRI_CONFIG = {
+    "my_kri": {
+        "ticker": "SYMBOL",           # or "tickers": "SECTOR_ETFS" for multi-ticker
+        "low_threshold": 2.0,         # Required: triggers low severity (yellow)
+        "high_threshold": 3.5,        # Optional: triggers high severity (red)
+        "metric": "daily_pct_change",  # "last_price" | "daily_pct_change" | "z_score" | "z_score_abs"
+        "condition": "abs",           # ">=" | "<=" | "abs" | "abs_le" | "spike"
+        "lookback": 30,               # Optional: days for z-score calculation
+        "description": "Brief description"
+    }
+}
+```
+
+**Metrics:**
+- `last_price`: Current price value
+- `daily_pct_change`: Day-over-day percentage change
+- `z_score`: Value relative to rolling mean/std (negative = below average)
+- `z_score_abs`: Absolute z-score (magnitude of deviation from norm)
+
+**Conditions:**
+- `>=`: Value >= threshold (for upward spikes)
+- `<=`: Value <= threshold (for downward spikes)
+- `abs`: |Value| >= threshold (for both directions)
+- `abs_le`: |Value| <= threshold (for bounded ranges)
+- `spike`: Value rises above threshold
+
+**Examples:**
+- Oil spike (low=2%, high=4%): `{"ticker": "CL=F", "low_threshold": 2.0, "high_threshold": 4.0, "metric": "daily_pct_change", "condition": "abs"}`
+- VIX elevated (low=25, high=35): `{"ticker": "^VIX", "low_threshold": 25.0, "high_threshold": 35.0, "metric": "last_price", "condition": ">="}`
+- Sector unusual movement: `{"tickers": "SECTOR_ETFS", "low_threshold": 2.0, "high_threshold": 3.0, "metric": "z_score_abs", "condition": ">="}`
+
+**Done!** `KRIChecker.check_all()` auto-discovers and runs all KRIs — no code changes needed
+
 ## Environment Setup
 
 Required in `.env`:
@@ -132,10 +190,13 @@ Get free key at https://fred.stlouisfed.org/docs/api/api_key.html
 | File | Purpose |
 |------|---------|
 | `app.py` | Main Streamlit app, renders all panels |
-| `config/settings.py` | All configuration constants |
+| `config/settings.py` | All configuration constants (tickers, thresholds, API keys) |
+| `config/kri_config.py` | KRI definitions (separate for easy management) |
 | `styles/theme.py` | Centralized CSS theme + conditional coloring functions (`color_rate_changes`, `color_price_changes`) |
 | `data/fetcher.py` | Base DataFetcher class with caching |
 | `data/yfinance_fetcher.py` | Generic Yahoo Finance fetcher (accepts any ticker config) |
 | `data/fred_fetcher.py` | Unified FRED API fetcher for mortgages, economics, treasury |
+| `data/kri_checker.py` | KRI framework (discovers and runs all KRIs from config) |
+| `data/kri_metrics.py` | Pluggable metric handlers for KRI calculations |
 | `data/treasury.py` | Treasury yield curve data |
 | `data/corporate_actions.py` | Corporate actions calendar |
