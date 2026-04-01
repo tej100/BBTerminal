@@ -168,7 +168,6 @@ KRI_CONFIG = {
 - `<=`: Value <= threshold (for downward spikes)
 - `abs`: |Value| >= threshold (for both directions)
 - `abs_le`: |Value| <= threshold (for bounded ranges)
-- `spike`: Value rises above threshold
 
 **Examples:**
 - Oil spike (low=2%, high=4%): `{"ticker": "CL=F", "low_threshold": 2.0, "high_threshold": 4.0, "metric": "daily_pct_change", "condition": "abs"}`

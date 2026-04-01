@@ -324,32 +324,15 @@ class KRIChecker:
             return abs(value) >= threshold
         elif condition == "abs_le":
             return abs(value) <= threshold
-        elif condition == "drop":
-            # Alert when value drops below threshold
-            return value <= threshold
-        elif condition == "spike":
-            return value >= threshold
         return False
 
     def _evaluate_severity(self, value: float, kri_def: Dict) -> Optional[Tuple[str, float]]:
-        """
-        Evaluate which threshold was hit.
-        For "drop" condition: low_threshold > high_threshold (e.g., 0.4 > 0.2)
-        """
+        """Evaluate which threshold was hit"""
         condition = kri_def["condition"]
         high_threshold = kri_def.get("high_threshold")
         low_threshold = kri_def.get("low_threshold")
 
-        # For "drop" condition: lower value = higher severity
-        # low_threshold (0.4) triggers yellow, high_threshold (0.2) triggers red
-        if condition == "drop":
-            if high_threshold is not None and value <= high_threshold:
-                return ("high", high_threshold)
-            if low_threshold is not None and value <= low_threshold:
-                return ("low", low_threshold)
-            return None
-
-        # Standard threshold checking - high threshold first
+        # Check high threshold first
         if high_threshold is not None:
             if self._check_condition(value, high_threshold, condition):
                 return ("high", high_threshold)

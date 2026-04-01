@@ -18,7 +18,6 @@ Conditions:
 - "<=": Value <= threshold
 - "abs": |Value| >= threshold
 - "abs_le": |Value| <= threshold
-- "spike": Value rises above threshold
 """
 
 KRI_CONFIG = {

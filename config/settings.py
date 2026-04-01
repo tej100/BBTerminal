@@ -82,7 +82,7 @@ EXCHANGE_CALENDARS = {
     "CN": "XSHG",  # Shanghai
 }
 
-# Treasury Tenors for Correlation Analysis (Treasury.gov column names)
+# Treasury Tenors (Treasury.gov API column names)
 TREASURY_TENORS = {
     "BC_1MONTH": "1M",
     "BC_2MONTH": "2M",
